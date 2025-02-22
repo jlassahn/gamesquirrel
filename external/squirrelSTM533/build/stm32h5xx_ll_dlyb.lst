@@ -1,0 +1,591 @@
+ARM GAS  /tmp/ccoLd0jB.s 			page 1
+
+
+   1              		.cpu cortex-m33
+   2              		.eabi_attribute 27, 1
+   3              		.eabi_attribute 28, 1
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"stm32h5xx_ll_dlyb.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.LL_DLYB_SetDelay,"ax",%progbits
+  18              		.align	1
+  19              		.global	LL_DLYB_SetDelay
+  20              		.arch armv8-m.main
+  21              		.arch_extension dsp
+  22              		.syntax unified
+  23              		.thumb
+  24              		.thumb_func
+  25              		.fpu fpv4-sp-d16
+  27              	LL_DLYB_SetDelay:
+  28              	.LVL0:
+  29              	.LFB361:
+  30              		.file 1 "Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c"
+   1:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /**
+   2:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   ******************************************************************************
+   3:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @file    stm32h5xx_ll_dlyb.c
+   4:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @author  MCD Application Team
+   5:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @brief   DelayBlock Low Layer HAL module driver.
+   6:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *
+   7:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          This file provides firmware functions to manage the following
+   8:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          functionalities of the DelayBlock peripheral:
+   9:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *           + input clock frequency
+  10:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *           + up to 12 oversampling phases
+  11:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *
+  12:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   ******************************************************************************
+  13:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @attention
+  14:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *
+  15:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * Copyright (c) 2023 STMicroelectronics.
+  16:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * All rights reserved.
+  17:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *
+  18:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * This software is licensed under terms that can be found in the LICENSE file
+  19:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * in the root directory of this software component.
+  20:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * If no LICENSE file comes with this software, it is provided AS-IS.
+  21:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *
+  22:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   ******************************************************************************
+  23:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   @verbatim
+  24:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   ==============================================================================
+  25:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****                        ##### DelayBlock peripheral features #####
+  26:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   ==============================================================================
+  27:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     [..] The DelayBlock is used to generate an Output clock which is de-phased from the Input
+  28:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****           clock. The phase of the Output clock is programmed by FW. The Output clock is then used
+ARM GAS  /tmp/ccoLd0jB.s 			page 2
+
+
+  29:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****           to clock the receive data in i.e. a SDMMC, OSPI or QSPI interface.
+  30:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****          The delay is Voltage and Temperature dependent, which may require FW to do re-tuning
+  31:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****           and recenter the Output clock phase to the receive data.
+  32:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  33:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     [..] The DelayBlock features include the following:
+  34:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****          (+) Input clock frequency.
+  35:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****          (+) Up to 12 oversampling phases.
+  36:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  37:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****                            ##### How to use this driver #####
+  38:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   ==============================================================================
+  39:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     [..]
+  40:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       This driver is a considered as a driver of service for external devices drivers
+  41:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       that interfaces with the DELAY peripheral.
+  42:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       The LL_DLYB_SetDelay() function, configure the Delay value configured on SEL and UNIT.
+  43:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       The LL_DLYB_GetDelay() function, return the Delay value configured on SEL and UNIT.
+  44:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       The LL_DLYB_GetClockPeriod()function, get the clock period.
+  45:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  46:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  47:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   @endverbatim
+  48:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   ******************************************************************************
+  49:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+  50:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  51:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /* Includes ------------------------------------------------------------------*/
+  52:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** #include "stm32h5xx_hal.h"
+  53:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  54:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /** @addtogroup STM32H5xx_LL_Driver
+  55:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @{
+  56:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+  57:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  58:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /** @defgroup DLYB_LL DLYB
+  59:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @brief DLYB LL module driver.
+  60:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @{
+  61:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+  62:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  63:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** #if defined(HAL_SD_MODULE_ENABLED) || defined(HAL_OSPI_MODULE_ENABLED) || defined(HAL_XSPI_MODULE_E
+  64:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** #if defined (DLYB_SDMMC1) || defined (DLYB_SDMMC2) || defined (DLYB_OCTOSPI1) || defined (DLYB_OCTO
+  65:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  66:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /**
+  67:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   @cond 0
+  68:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+  69:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  70:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /* Private typedef -----------------------------------------------------------*/
+  71:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /* Private define ------------------------------------------------------------*/
+  72:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** #define DLYB_TIMEOUT 0xFFU
+  73:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** #define DLYB_LNG_10_0_MASK   0x07FF0000U
+  74:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** #define DLYB_LNG_11_10_MASK  0x0C000000U
+  75:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /* Private macro -------------------------------------------------------------*/
+  76:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /* Private variables ---------------------------------------------------------*/
+  77:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /* Private function prototypes -----------------------------------------------*/
+  78:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  79:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /**
+  80:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   @endcond
+  81:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+  82:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  83:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /* Exported functions --------------------------------------------------------*/
+  84:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  85:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /** @addtogroup DLYB_LL_Exported_Functions
+ARM GAS  /tmp/ccoLd0jB.s 			page 3
+
+
+  86:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *  @brief    Configuration and control functions
+  87:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *
+  88:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** @verbatim
+  89:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****  ===============================================================================
+  90:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****               ##### Control functions #####
+  91:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****  ===============================================================================
+  92:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     [..]  This section provides functions allowing to
+  93:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       (+) Control the DLYB.
+  94:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** @endverbatim
+  95:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @{
+  96:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+  97:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+  98:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /** @addtogroup DLYB_Control_Functions DLYB Control functions
+  99:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @{
+ 100:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+ 101:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 102:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /**
+ 103:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @brief  Set the Delay value configured on SEL and UNIT.
+ 104:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @param  DLYBx: Pointer to DLYB instance.
+ 105:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @param  pdlyb_cfg: Pointer to DLYB configuration structure.
+ 106:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @retval An ErrorStatus enumeration value:
+ 107:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          - SUCCESS: the Delay value is set.
+ 108:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          - ERROR: the Delay value is not set.
+ 109:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+ 110:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** void LL_DLYB_SetDelay(DLYB_TypeDef *DLYBx, LL_DLYB_CfgTypeDef  *pdlyb_cfg)
+ 111:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** {
+  31              		.loc 1 111 1 view -0
+  32              		.cfi_startproc
+  33              		@ args = 0, pretend = 0, frame = 0
+  34              		@ frame_needed = 0, uses_anonymous_args = 0
+  35              		@ link register save eliminated.
+ 112:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Check the DelayBlock instance */
+ 113:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   assert_param(IS_DLYB_ALL_INSTANCE(DLYBx));
+  36              		.loc 1 113 3 view .LVU1
+ 114:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 115:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Enable the length sampling */
+ 116:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   SET_BIT(DLYBx->CR, DLYB_CR_SEN);
+  37              		.loc 1 116 3 view .LVU2
+  38 0000 0368     		ldr	r3, [r0]
+  39 0002 43F00203 		orr	r3, r3, #2
+  40 0006 0360     		str	r3, [r0]
+ 117:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 118:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Update the UNIT and SEL field */
+ 119:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   DLYBx->CFGR = (pdlyb_cfg->PhaseSel) | ((pdlyb_cfg->Units) << DLYB_CFGR_UNIT_Pos);
+  41              		.loc 1 119 3 view .LVU3
+  42              		.loc 1 119 27 is_stmt 0 view .LVU4
+  43 0008 4B68     		ldr	r3, [r1, #4]
+  44              		.loc 1 119 52 view .LVU5
+  45 000a 0A68     		ldr	r2, [r1]
+  46              		.loc 1 119 39 view .LVU6
+  47 000c 43EA0223 		orr	r3, r3, r2, lsl #8
+  48              		.loc 1 119 15 view .LVU7
+  49 0010 4360     		str	r3, [r0, #4]
+ 120:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 121:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Disable the length sampling */
+ 122:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   CLEAR_BIT(DLYBx->CR, DLYB_CR_SEN);
+  50              		.loc 1 122 3 is_stmt 1 view .LVU8
+ARM GAS  /tmp/ccoLd0jB.s 			page 4
+
+
+  51 0012 0368     		ldr	r3, [r0]
+  52 0014 23F00203 		bic	r3, r3, #2
+  53 0018 0360     		str	r3, [r0]
+ 123:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** }
+  54              		.loc 1 123 1 is_stmt 0 view .LVU9
+  55 001a 7047     		bx	lr
+  56              		.cfi_endproc
+  57              	.LFE361:
+  59              		.section	.text.LL_DLYB_GetDelay,"ax",%progbits
+  60              		.align	1
+  61              		.global	LL_DLYB_GetDelay
+  62              		.syntax unified
+  63              		.thumb
+  64              		.thumb_func
+  65              		.fpu fpv4-sp-d16
+  67              	LL_DLYB_GetDelay:
+  68              	.LVL1:
+  69              	.LFB362:
+ 124:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 125:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /**
+ 126:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @brief  Get the Delay value configured on SEL and UNIT.
+ 127:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @param  DLYBx: Pointer to DLYB instance.
+ 128:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @param  pdlyb_cfg: Pointer to DLYB configuration structure.
+ 129:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @retval An ErrorStatus enumeration value:
+ 130:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          - SUCCESS: the Delay value is received.
+ 131:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          - ERROR: the Delay value is not received.
+ 132:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+ 133:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** void LL_DLYB_GetDelay(DLYB_TypeDef *DLYBx, LL_DLYB_CfgTypeDef *pdlyb_cfg)
+ 134:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** {
+  70              		.loc 1 134 1 is_stmt 1 view -0
+  71              		.cfi_startproc
+  72              		@ args = 0, pretend = 0, frame = 0
+  73              		@ frame_needed = 0, uses_anonymous_args = 0
+  74              		@ link register save eliminated.
+ 135:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Check the DelayBlock instance */
+ 136:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   assert_param(IS_DLYB_ALL_INSTANCE(DLYBx));
+  75              		.loc 1 136 3 view .LVU11
+ 137:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 138:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Fill the DelayBlock configuration structure with SEL and UNIT value */
+ 139:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   pdlyb_cfg->Units = ((DLYBx->CFGR & DLYB_CFGR_UNIT) >> DLYB_CFGR_UNIT_Pos);
+  76              		.loc 1 139 3 view .LVU12
+  77              		.loc 1 139 29 is_stmt 0 view .LVU13
+  78 0000 4368     		ldr	r3, [r0, #4]
+  79              		.loc 1 139 54 view .LVU14
+  80 0002 C3F30623 		ubfx	r3, r3, #8, #7
+  81              		.loc 1 139 20 view .LVU15
+  82 0006 0B60     		str	r3, [r1]
+ 140:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   pdlyb_cfg->PhaseSel = (DLYBx->CFGR & DLYB_CFGR_SEL);
+  83              		.loc 1 140 3 is_stmt 1 view .LVU16
+  84              		.loc 1 140 31 is_stmt 0 view .LVU17
+  85 0008 4368     		ldr	r3, [r0, #4]
+  86              		.loc 1 140 38 view .LVU18
+  87 000a 03F00F03 		and	r3, r3, #15
+  88              		.loc 1 140 23 view .LVU19
+  89 000e 4B60     		str	r3, [r1, #4]
+ 141:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** }
+  90              		.loc 1 141 1 view .LVU20
+ARM GAS  /tmp/ccoLd0jB.s 			page 5
+
+
+  91 0010 7047     		bx	lr
+  92              		.cfi_endproc
+  93              	.LFE362:
+  95              		.section	.text.LL_DLYB_GetClockPeriod,"ax",%progbits
+  96              		.align	1
+  97              		.global	LL_DLYB_GetClockPeriod
+  98              		.syntax unified
+  99              		.thumb
+ 100              		.thumb_func
+ 101              		.fpu fpv4-sp-d16
+ 103              	LL_DLYB_GetClockPeriod:
+ 104              	.LVL2:
+ 105              	.LFB363:
+ 142:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 143:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** /**
+ 144:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @brief  Get the clock period.
+ 145:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @param  DLYBx: Pointer to DLYB instance.
+ 146:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @param  pdlyb_cfg: Pointer to DLYB configuration structure.
+ 147:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   * @retval An ErrorStatus enumeration value:
+ 148:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          - SUCCESS: there is a valid period detected and stored in pdlyb_cfg.
+ 149:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   *          - ERROR: there is no valid period detected.
+ 150:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   */
+ 151:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** uint32_t LL_DLYB_GetClockPeriod(DLYB_TypeDef *DLYBx, LL_DLYB_CfgTypeDef *pdlyb_cfg)
+ 152:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** {
+ 106              		.loc 1 152 1 is_stmt 1 view -0
+ 107              		.cfi_startproc
+ 108              		@ args = 0, pretend = 0, frame = 0
+ 109              		@ frame_needed = 0, uses_anonymous_args = 0
+ 110              		.loc 1 152 1 is_stmt 0 view .LVU22
+ 111 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 112              	.LCFI0:
+ 113              		.cfi_def_cfa_offset 24
+ 114              		.cfi_offset 3, -24
+ 115              		.cfi_offset 4, -20
+ 116              		.cfi_offset 5, -16
+ 117              		.cfi_offset 6, -12
+ 118              		.cfi_offset 7, -8
+ 119              		.cfi_offset 14, -4
+ 120 0002 0446     		mov	r4, r0
+ 121 0004 0F46     		mov	r7, r1
+ 153:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   uint32_t i = 0U;
+ 122              		.loc 1 153 3 is_stmt 1 view .LVU23
+ 123              	.LVL3:
+ 154:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   uint32_t nb ;
+ 124              		.loc 1 154 3 view .LVU24
+ 155:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   uint32_t lng ;
+ 125              		.loc 1 155 3 view .LVU25
+ 156:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   uint32_t tickstart;
+ 126              		.loc 1 156 3 view .LVU26
+ 157:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 158:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Check the DelayBlock instance */
+ 159:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   assert_param(IS_DLYB_ALL_INSTANCE(DLYBx));
+ 127              		.loc 1 159 3 view .LVU27
+ 160:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 161:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Enable the length sampling */
+ 162:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   SET_BIT(DLYBx->CR, DLYB_CR_SEN);
+ 128              		.loc 1 162 3 view .LVU28
+ARM GAS  /tmp/ccoLd0jB.s 			page 6
+
+
+ 129 0006 0368     		ldr	r3, [r0]
+ 130 0008 43F00203 		orr	r3, r3, #2
+ 131 000c 0360     		str	r3, [r0]
+ 163:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 164:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Delay line length detection */
+ 165:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   while (i < DLYB_MAX_UNIT)
+ 132              		.loc 1 165 3 view .LVU29
+ 153:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   uint32_t nb ;
+ 133              		.loc 1 153 12 is_stmt 0 view .LVU30
+ 134 000e 0026     		movs	r6, #0
+ 135              		.loc 1 165 9 view .LVU31
+ 136 0010 0AE0     		b	.L4
+ 137              	.LVL4:
+ 138              	.L17:
+ 166:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   {
+ 167:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     /* Set the Delay of the UNIT(s)*/
+ 168:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     DLYBx->CFGR = DLYB_MAX_SELECT | (i << DLYB_CFGR_UNIT_Pos);
+ 169:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 170:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     /* Waiting for a LNG valid value */
+ 171:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     tickstart =  HAL_GetTick();
+ 172:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     while ((DLYBx->CFGR & DLYB_CFGR_LNGF) == 0U)
+ 173:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 174:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       if ((HAL_GetTick() - tickstart) >=  DLYB_TIMEOUT)
+ 175:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       {
+ 176:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         /* New check to avoid false timeout detection in case of preemption */
+ 177:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         if ((DLYBx->CFGR & DLYB_CFGR_LNGF) == 0U)
+ 178:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         {
+ 179:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****           return (uint32_t) HAL_TIMEOUT;
+ 180:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         }
+ 181:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       }
+ 182:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ 183:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 184:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     if ((DLYBx->CFGR & DLYB_LNG_10_0_MASK) != 0U)
+ 139              		.loc 1 184 5 is_stmt 1 view .LVU32
+ 140              		.loc 1 184 15 is_stmt 0 view .LVU33
+ 141 0012 6268     		ldr	r2, [r4, #4]
+ 142              		.loc 1 184 22 view .LVU34
+ 143 0014 1B4B     		ldr	r3, .L19
+ 144 0016 1340     		ands	r3, r3, r2
+ 145              		.loc 1 184 8 view .LVU35
+ 146 0018 2BB1     		cbz	r3, .L8
+ 185:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 186:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       if ((DLYBx->CFGR & (DLYB_CFGR_LNG_11 | DLYB_CFGR_LNG_10)) != DLYB_LNG_11_10_MASK)
+ 147              		.loc 1 186 7 is_stmt 1 view .LVU36
+ 148              		.loc 1 186 17 is_stmt 0 view .LVU37
+ 149 001a 6368     		ldr	r3, [r4, #4]
+ 150              		.loc 1 186 24 view .LVU38
+ 151 001c 03F04063 		and	r3, r3, #201326592
+ 152              		.loc 1 186 10 view .LVU39
+ 153 0020 B3F1406F 		cmp	r3, #201326592
+ 154 0024 16D1     		bne	.L9
+ 155              	.L8:
+ 187:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       {
+ 188:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         /* Delay line length is configured to one input clock period*/
+ 189:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         break;
+ 190:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       }
+ 191:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ARM GAS  /tmp/ccoLd0jB.s 			page 7
+
+
+ 192:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     i++;
+ 156              		.loc 1 192 5 is_stmt 1 view .LVU40
+ 157              		.loc 1 192 6 is_stmt 0 view .LVU41
+ 158 0026 0136     		adds	r6, r6, #1
+ 159              	.LVL5:
+ 160              	.L4:
+ 165:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   {
+ 161              		.loc 1 165 9 is_stmt 1 view .LVU42
+ 162 0028 7F2E     		cmp	r6, #127
+ 163 002a 13D8     		bhi	.L9
+ 168:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 164              		.loc 1 168 5 view .LVU43
+ 168:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 165              		.loc 1 168 40 is_stmt 0 view .LVU44
+ 166 002c 3302     		lsls	r3, r6, #8
+ 168:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 167              		.loc 1 168 35 view .LVU45
+ 168 002e 43F00C03 		orr	r3, r3, #12
+ 168:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 169              		.loc 1 168 17 view .LVU46
+ 170 0032 6360     		str	r3, [r4, #4]
+ 171:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     while ((DLYBx->CFGR & DLYB_CFGR_LNGF) == 0U)
+ 171              		.loc 1 171 5 is_stmt 1 view .LVU47
+ 171:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     while ((DLYBx->CFGR & DLYB_CFGR_LNGF) == 0U)
+ 172              		.loc 1 171 18 is_stmt 0 view .LVU48
+ 173 0034 FFF7FEFF 		bl	HAL_GetTick
+ 174              	.LVL6:
+ 175 0038 0546     		mov	r5, r0
+ 176              	.LVL7:
+ 172:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 177              		.loc 1 172 5 is_stmt 1 view .LVU49
+ 178              	.L5:
+ 172:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 179              		.loc 1 172 11 view .LVU50
+ 172:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 180              		.loc 1 172 18 is_stmt 0 view .LVU51
+ 181 003a 6368     		ldr	r3, [r4, #4]
+ 172:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 182              		.loc 1 172 11 view .LVU52
+ 183 003c 002B     		cmp	r3, #0
+ 184 003e E8DB     		blt	.L17
+ 174:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       {
+ 185              		.loc 1 174 7 is_stmt 1 view .LVU53
+ 174:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       {
+ 186              		.loc 1 174 12 is_stmt 0 view .LVU54
+ 187 0040 FFF7FEFF 		bl	HAL_GetTick
+ 188              	.LVL8:
+ 174:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       {
+ 189              		.loc 1 174 26 view .LVU55
+ 190 0044 401B     		subs	r0, r0, r5
+ 174:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       {
+ 191              		.loc 1 174 10 view .LVU56
+ 192 0046 FE28     		cmp	r0, #254
+ 193 0048 F7D9     		bls	.L5
+ 177:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         {
+ 194              		.loc 1 177 9 is_stmt 1 view .LVU57
+ 177:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         {
+ARM GAS  /tmp/ccoLd0jB.s 			page 8
+
+
+ 195              		.loc 1 177 19 is_stmt 0 view .LVU58
+ 196 004a 6368     		ldr	r3, [r4, #4]
+ 177:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         {
+ 197              		.loc 1 177 12 view .LVU59
+ 198 004c 002B     		cmp	r3, #0
+ 199 004e F4DB     		blt	.L5
+ 179:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****         }
+ 200              		.loc 1 179 18 view .LVU60
+ 201 0050 0320     		movs	r0, #3
+ 202              	.LVL9:
+ 203              	.L3:
+ 193:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   }
+ 194:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 195:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   if (DLYB_MAX_UNIT != i)
+ 196:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   {
+ 197:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     /* Determine how many unit delays (nb) span one input clock period */
+ 198:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     lng = (DLYBx->CFGR & DLYB_CFGR_LNG) >> 16U;
+ 199:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     nb = 10U;
+ 200:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     while ((nb > 0U) && ((lng >> nb) == 0U))
+ 201:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 202:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       nb--;
+ 203:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ 204:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     if (nb != 0U)
+ 205:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 206:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       pdlyb_cfg->PhaseSel = nb ;
+ 207:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       pdlyb_cfg->Units = i ;
+ 208:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 209:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       /* Disable the length sampling */
+ 210:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       DLYBx->CR = DLYB_CR_SEN;
+ 211:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 212:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       return (uint32_t)SUCCESS;
+ 213:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ 214:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   }
+ 215:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 216:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   /* Disable the length sampling */
+ 217:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   DLYBx->CR = DLYB_CR_SEN;
+ 218:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 219:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   return (uint32_t)ERROR;
+ 220:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 221:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** }
+ 204              		.loc 1 221 1 view .LVU61
+ 205 0052 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 206              	.LVL10:
+ 207              	.L9:
+ 195:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   {
+ 208              		.loc 1 195 3 is_stmt 1 view .LVU62
+ 195:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****   {
+ 209              		.loc 1 195 6 is_stmt 0 view .LVU63
+ 210 0054 802E     		cmp	r6, #128
+ 211 0056 0AD0     		beq	.L11
+ 198:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     nb = 10U;
+ 212              		.loc 1 198 5 is_stmt 1 view .LVU64
+ 198:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     nb = 10U;
+ 213              		.loc 1 198 17 is_stmt 0 view .LVU65
+ 214 0058 6268     		ldr	r2, [r4, #4]
+ 198:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     nb = 10U;
+ 215              		.loc 1 198 9 view .LVU66
+ARM GAS  /tmp/ccoLd0jB.s 			page 9
+
+
+ 216 005a C2F30B42 		ubfx	r2, r2, #16, #12
+ 217              	.LVL11:
+ 199:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     while ((nb > 0U) && ((lng >> nb) == 0U))
+ 218              		.loc 1 199 5 is_stmt 1 view .LVU67
+ 200:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 219              		.loc 1 200 5 view .LVU68
+ 199:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     while ((nb > 0U) && ((lng >> nb) == 0U))
+ 220              		.loc 1 199 8 is_stmt 0 view .LVU69
+ 221 005e 0A23     		movs	r3, #10
+ 200:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 222              		.loc 1 200 11 view .LVU70
+ 223 0060 00E0     		b	.L12
+ 224              	.LVL12:
+ 225              	.L14:
+ 202:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ 226              		.loc 1 202 7 is_stmt 1 view .LVU71
+ 202:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ 227              		.loc 1 202 9 is_stmt 0 view .LVU72
+ 228 0062 013B     		subs	r3, r3, #1
+ 229              	.LVL13:
+ 230              	.L12:
+ 200:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 231              		.loc 1 200 11 is_stmt 1 view .LVU73
+ 232 0064 13B1     		cbz	r3, .L13
+ 200:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 233              		.loc 1 200 22 is_stmt 0 discriminator 1 view .LVU74
+ 234 0066 32FA03F1 		lsrs	r1, r2, r3
+ 235 006a FAD0     		beq	.L14
+ 236              	.L13:
+ 204:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 237              		.loc 1 204 5 is_stmt 1 view .LVU75
+ 204:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     {
+ 238              		.loc 1 204 8 is_stmt 0 view .LVU76
+ 239 006c 1BB9     		cbnz	r3, .L18
+ 240              	.LVL14:
+ 241              	.L11:
+ 217:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 242              		.loc 1 217 3 is_stmt 1 view .LVU77
+ 217:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 243              		.loc 1 217 13 is_stmt 0 view .LVU78
+ 244 006e 0223     		movs	r3, #2
+ 245 0070 2360     		str	r3, [r4]
+ 219:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 246              		.loc 1 219 3 is_stmt 1 view .LVU79
+ 219:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 247              		.loc 1 219 10 is_stmt 0 view .LVU80
+ 248 0072 0120     		movs	r0, #1
+ 249 0074 EDE7     		b	.L3
+ 250              	.LVL15:
+ 251              	.L18:
+ 206:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       pdlyb_cfg->Units = i ;
+ 252              		.loc 1 206 7 is_stmt 1 view .LVU81
+ 206:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****       pdlyb_cfg->Units = i ;
+ 253              		.loc 1 206 27 is_stmt 0 view .LVU82
+ 254 0076 7B60     		str	r3, [r7, #4]
+ 207:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 255              		.loc 1 207 7 is_stmt 1 view .LVU83
+ARM GAS  /tmp/ccoLd0jB.s 			page 10
+
+
+ 207:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 256              		.loc 1 207 24 is_stmt 0 view .LVU84
+ 257 0078 3E60     		str	r6, [r7]
+ 210:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 258              		.loc 1 210 7 is_stmt 1 view .LVU85
+ 210:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 259              		.loc 1 210 17 is_stmt 0 view .LVU86
+ 260 007a 0223     		movs	r3, #2
+ 261              	.LVL16:
+ 210:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c **** 
+ 262              		.loc 1 210 17 view .LVU87
+ 263 007c 2360     		str	r3, [r4]
+ 264              	.LVL17:
+ 212:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ 265              		.loc 1 212 7 is_stmt 1 view .LVU88
+ 212:Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_dlyb.c ****     }
+ 266              		.loc 1 212 14 is_stmt 0 view .LVU89
+ 267 007e 0020     		movs	r0, #0
+ 268 0080 E7E7     		b	.L3
+ 269              	.L20:
+ 270 0082 00BF     		.align	2
+ 271              	.L19:
+ 272 0084 0000FF07 		.word	134152192
+ 273              		.cfi_endproc
+ 274              	.LFE363:
+ 276              		.text
+ 277              	.Letext0:
+ 278              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
+ 279              		.file 3 "Drivers/CMSIS/Device/ST/STM32H5xx/Include/stm32h533xx.h"
+ 280              		.file 4 "Drivers/CMSIS/Device/ST/STM32H5xx/Include/stm32h5xx.h"
+ 281              		.file 5 "Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_hal_def.h"
+ 282              		.file 6 "Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_ll_dlyb.h"
+ 283              		.file 7 "Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_hal.h"
+ARM GAS  /tmp/ccoLd0jB.s 			page 11
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 stm32h5xx_ll_dlyb.c
+     /tmp/ccoLd0jB.s:18     .text.LL_DLYB_SetDelay:0000000000000000 $t
+     /tmp/ccoLd0jB.s:27     .text.LL_DLYB_SetDelay:0000000000000000 LL_DLYB_SetDelay
+     /tmp/ccoLd0jB.s:60     .text.LL_DLYB_GetDelay:0000000000000000 $t
+     /tmp/ccoLd0jB.s:67     .text.LL_DLYB_GetDelay:0000000000000000 LL_DLYB_GetDelay
+     /tmp/ccoLd0jB.s:96     .text.LL_DLYB_GetClockPeriod:0000000000000000 $t
+     /tmp/ccoLd0jB.s:103    .text.LL_DLYB_GetClockPeriod:0000000000000000 LL_DLYB_GetClockPeriod
+     /tmp/ccoLd0jB.s:272    .text.LL_DLYB_GetClockPeriod:0000000000000084 $d
+
+UNDEFINED SYMBOLS
+HAL_GetTick
