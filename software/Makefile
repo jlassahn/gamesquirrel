@@ -1,20 +1,10 @@
 
-EXTERN_SOURCE := \
-STM32H5xx_HAL_Driver/Src/stm32h5xx_hal.c \
-tinyusb/src/tusb.c
-
-EXTERN_OBJS := $(addprefix build/obj/extern, $(addsuffix .o, $(basename $(EXTERN_SOURCE))))
-
-build/obj/extern/%.o: external/%.c | Makefile
-	mkdir -p $(@D)
-	$(CC) $(CC_OPTS) -c -o $@ $^
 
 
-CC = arm-none-eabi-gcc
 
-BASE = external/tinyusb
+CC := arm-none-eabi-gcc
 
-CC_OPTS = \
+CC_OPTS := \
 -DSTM32H503xx \
 -DHSE_VALUE=24000000 \
 -DCFG_TUSB_MCU=OPT_MCU_STM32H5 \
@@ -58,7 +48,7 @@ CC_OPTS = \
 -Wno-error=undef \
 -Wno-error=unused-parameter \
 -MD \
--I$(BASE)/src \
+-Iexternal/tinyusb/src \
 -Iexternal/CMSIS/Core/Include \
 -Iexternal/STM32H5xx/Include \
 -Iexternal/STM32H5xx_HAL_Driver/Inc \
@@ -79,31 +69,30 @@ LD_OPTS = \
 
 
 SRCS = \
-$(BASE)/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c \
-$(BASE)/src/tusb.c \
-$(BASE)/src/common/tusb_fifo.c \
-$(BASE)/src/device/usbd.c \
-$(BASE)/src/device/usbd_control.c \
-$(BASE)/src/typec/usbc.c \
-$(BASE)/src/class/audio/audio_device.c \
-$(BASE)/src/class/cdc/cdc_device.c \
-$(BASE)/src/class/dfu/dfu_device.c \
-$(BASE)/src/class/dfu/dfu_rt_device.c \
-$(BASE)/src/class/hid/hid_device.c \
-$(BASE)/src/class/midi/midi_device.c \
-$(BASE)/src/class/msc/msc_device.c \
-$(BASE)/src/class/net/ecm_rndis_device.c \
-$(BASE)/src/class/net/ncm_device.c \
-$(BASE)/src/class/usbtmc/usbtmc_device.c \
-$(BASE)/src/class/video/video_device.c \
-$(BASE)/src/class/vendor/vendor_device.c \
-$(BASE)/src/host/usbh.c \
-$(BASE)/src/host/hub.c \
-$(BASE)/src/class/cdc/cdc_host.c \
-$(BASE)/src/class/hid/hid_host.c \
-$(BASE)/src/class/msc/msc_host.c \
-$(BASE)/src/class/vendor/vendor_host.c \
-external/STM32H5xx/Source/Templates/gcc/startup_stm32h503xx.s \
+external/tinyusb/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c \
+external/tinyusb/src/tusb.c \
+external/tinyusb/src/common/tusb_fifo.c \
+external/tinyusb/src/device/usbd.c \
+external/tinyusb/src/device/usbd_control.c \
+external/tinyusb/src/typec/usbc.c \
+external/tinyusb/src/class/audio/audio_device.c \
+external/tinyusb/src/class/cdc/cdc_device.c \
+external/tinyusb/src/class/dfu/dfu_device.c \
+external/tinyusb/src/class/dfu/dfu_rt_device.c \
+external/tinyusb/src/class/hid/hid_device.c \
+external/tinyusb/src/class/midi/midi_device.c \
+external/tinyusb/src/class/msc/msc_device.c \
+external/tinyusb/src/class/net/ecm_rndis_device.c \
+external/tinyusb/src/class/net/ncm_device.c \
+external/tinyusb/src/class/usbtmc/usbtmc_device.c \
+external/tinyusb/src/class/video/video_device.c \
+external/tinyusb/src/class/vendor/vendor_device.c \
+external/tinyusb/src/host/usbh.c \
+external/tinyusb/src/host/hub.c \
+external/tinyusb/src/class/cdc/cdc_host.c \
+external/tinyusb/src/class/hid/hid_host.c \
+external/tinyusb/src/class/msc/msc_host.c \
+external/tinyusb/src/class/vendor/vendor_host.c \
 external/STM32H5xx/Source/Templates/system_stm32h5xx.c \
 external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal.c \
 external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_cortex.c \
@@ -121,17 +110,27 @@ src/usb_example/main.c \
 src/usb_example/msc_disk.c \
 src/usb_example/usb_descriptors.c
 
+OBJS := $(addprefix build/obj/, $(addsuffix .o, $(basename $(SRCS))))
 
-LIBS = \
+LIBS := \
 -lgcc \
 -lm \
 -lc \
 -lnosys
 
-all: cdc_msc.elf cdc_msc.bin build/obj/extern/tinyusb/src/tusb.o
+all: cdc_msc.elf cdc_msc.bin
 
-cdc_msc.elf:
-	$(CC) $(CC_OPTS) $(LD_OPTS) -o cdc_msc.elf $(SRCS) $(LIBS)
+cdc_msc.elf: $(OBJS)
+	$(CC) $(CC_OPTS) $(LD_OPTS) -o cdc_msc.elf \
+	external/STM32H5xx/Source/Templates/gcc/startup_stm32h503xx.s \
+	$(OBJS) \
+	$(LIBS)
 
 cdc_msc.bin: cdc_msc.elf
 	arm-none-eabi-objcopy -O binary cdc_msc.elf cdc_msc.bin
+
+
+build/obj/%.o: %.c | Makefile
+	mkdir -p $(@D)
+	$(CC) $(CC_OPTS) -c -o $@ $^
+
