@@ -6,7 +6,7 @@
 */
 
 #include <stdint.h>
-#inlcude <stdbool.h>
+#include <stdbool.h>
 
 int main(void)
 {

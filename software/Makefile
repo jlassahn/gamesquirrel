@@ -1,7 +1,18 @@
 
+EXTERN_SOURCE := \
+STM32H5xx_HAL_Driver/Src/stm32h5xx_hal.c \
+tinyusb/src/tusb.c
+
+EXTERN_OBJS := $(addprefix build/obj/extern, $(addsuffix .o, $(basename $(EXTERN_SOURCE))))
+
+build/obj/extern/%.o: external/%.c | Makefile
+	mkdir -p $(@D)
+	$(CC) $(CC_OPTS) -c -o $@ $^
+
+
 CC = arm-none-eabi-gcc
 
-BASE = ../external/tinyusb
+BASE = external/tinyusb
 
 CC_OPTS = \
 -DSTM32H503xx \
@@ -48,9 +59,9 @@ CC_OPTS = \
 -Wno-error=unused-parameter \
 -MD \
 -I$(BASE)/src \
--I../external/CMSIS/Core/Include \
--I../external/STM32H5xx/Include \
--I../external/STM32H5xx_HAL_Driver/Inc \
+-Iexternal/CMSIS/Core/Include \
+-Iexternal/STM32H5xx/Include \
+-Iexternal/STM32H5xx_HAL_Driver/Inc \
 -Isrc/system \
 -Isrc/usb_example
 
@@ -92,18 +103,18 @@ $(BASE)/src/class/cdc/cdc_host.c \
 $(BASE)/src/class/hid/hid_host.c \
 $(BASE)/src/class/msc/msc_host.c \
 $(BASE)/src/class/vendor/vendor_host.c \
-../external/STM32H5xx/Source/Templates/gcc/startup_stm32h503xx.s \
-../external/STM32H5xx/Source/Templates/system_stm32h5xx.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_cortex.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pwr.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pwr_ex.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_rcc.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_rcc_ex.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_uart.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_uart_ex.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_gpio.c \
-../external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_dma.c \
+external/STM32H5xx/Source/Templates/gcc/startup_stm32h503xx.s \
+external/STM32H5xx/Source/Templates/system_stm32h5xx.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_cortex.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pwr.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pwr_ex.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_rcc.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_rcc_ex.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_uart.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_uart_ex.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_gpio.c \
+external/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_dma.c \
 src/usb_example/board.c \
 src/usb_example/family.c \
 src/usb_example/main.c \
@@ -117,7 +128,7 @@ LIBS = \
 -lc \
 -lnosys
 
-all: cdc_msc.elf cdc_msc.bin
+all: cdc_msc.elf cdc_msc.bin build/obj/extern/tinyusb/src/tusb.o
 
 cdc_msc.elf:
 	$(CC) $(CC_OPTS) $(LD_OPTS) -o cdc_msc.elf $(SRCS) $(LIBS)
