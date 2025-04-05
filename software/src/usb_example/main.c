@@ -26,6 +26,7 @@
 #include "board_api.h"
 #include "tusb.h"
 #include <stdio.h>
+#include "stm32h503xx.h"
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -47,9 +48,89 @@ static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 void led_blinking_task(void);
 void cdc_task(void);
 
+
+void hw_init(void)
+{
+  board_init();
+
+  #define FSDEV_REG USB_DRD_FS_NS
+  #define USB_CNTR_FRES USB_CNTR_USBRST
+  #define FSDEV_EP_COUNT 8
+
+  // Follow the RM mentions to use a special ordering of PDWN and FRES
+  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
+    asm("NOP");
+  }
+
+  // Perform USB peripheral reset
+  FSDEV_REG->CNTR = USB_CNTR_FRES | USB_CNTR_PDWN;
+  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
+    asm("NOP");
+  }
+
+  FSDEV_REG->CNTR &= ~USB_CNTR_PDWN;
+
+  // Wait startup time, for F042 and F070, this is <= 1 us.
+  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
+    asm("NOP");
+  }
+  FSDEV_REG->CNTR = 0; // Enable USB
+
+  // FIXME for some reason if I don't read back CNTR the CHEP registers don't
+  // work.  WTF?  Is this a hardware quirk or a problem with compiler
+  // optimization?  Maybe a compiler optimization issue, since removing the
+  // volatile below prevents it from working.
+  volatile uint32_t reg = FSDEV_REG->CNTR;
+  (void)reg;
+
+#if 0
+  // BTABLE register does not exist any more on 32-bit bus devices
+  FSDEV_REG->BTABLE = FSDEV_BTABLE_BASE;
+#endif
+
+  FSDEV_REG->ISTR = 0; // Clear pending interrupts
+
+  // Reset endpoints to disabled
+  //for (uint32_t i = 0; i < FSDEV_EP_COUNT; i++) {
+    // This doesn't clear all bits since some bits are "toggle", but does set the type to DISABLED.
+    //ep_write(i, 0u, false);
+    //FSDEV_REG->ep[i].reg = (fsdev_bus_t) 0;
+    FSDEV_REG->CHEP0R = 0;
+    FSDEV_REG->CHEP1R = 0;
+    FSDEV_REG->CHEP2R = 0;
+    FSDEV_REG->CHEP3R = 0;
+    FSDEV_REG->CHEP4R = 0;
+    FSDEV_REG->CHEP5R = 0;
+    FSDEV_REG->CHEP6R = 0;
+    FSDEV_REG->CHEP7R = 0;
+  //}
+
+  FSDEV_REG->CHEP0R = 0x2220;
+
+
+  //handle_bus_reset(rhport);
+    // Set up endpoint registers
+    //FSDEV_REG->DADDR = 0u; // disable USB Function
+    FSDEV_REG->DADDR = USB_DADDR_EF; // Enable USB Function
+
+  // Enable pull-up if supported
+  //dcd_connect(rhport);
+    FSDEV_REG->BCDR |= USB_BCDR_DPPU;
+}
+
 /*------------- MAIN -------------*/
 int main(void) {
-  board_init();
+
+  hw_init();
+  printf("Hello, world\r\n");
+  printf("CHEP0R == %.8lX\r\n", USB_DRD_FS_NS->CHEP0R);
+  printf("CHEP1R == %.8lX\r\n", USB_DRD_FS_NS->CHEP1R);
+  printf("CHEP2R == %.8lX\r\n", USB_DRD_FS_NS->CHEP2R);
+  printf("CHEP3R == %.8lX\r\n", USB_DRD_FS_NS->CHEP3R);
+  printf("CHEP4R == %.8lX\r\n", USB_DRD_FS_NS->CHEP4R);
+  printf("CHEP5R == %.8lX\r\n", USB_DRD_FS_NS->CHEP5R);
+  printf("CHEP6R == %.8lX\r\n", USB_DRD_FS_NS->CHEP6R);
+  printf("CHEP7R == %.8lX\r\n", USB_DRD_FS_NS->CHEP7R);
 
   // init device stack on configured roothub port
   tusb_rhport_init_t dev_init = {
@@ -58,11 +139,26 @@ int main(void) {
   };
   tusb_init(BOARD_TUD_RHPORT, &dev_init);
 
+  /*
   if (board_init_after_tusb) {
+    printf("board_init_after_usb\r\n");
     board_init_after_tusb();
   }
+  else
+  {
+    printf("NO AFTER USB\r\n");
+  }
+  */
 
-  printf("Hello, world\r\n");
+  printf("after tusb\r\n");
+  printf("CHEP0R == %.8lX\r\n", USB_DRD_FS_NS->CHEP0R);
+  printf("CHEP1R == %.8lX\r\n", USB_DRD_FS_NS->CHEP1R);
+  printf("CHEP2R == %.8lX\r\n", USB_DRD_FS_NS->CHEP2R);
+  printf("CHEP3R == %.8lX\r\n", USB_DRD_FS_NS->CHEP3R);
+  printf("CHEP4R == %.8lX\r\n", USB_DRD_FS_NS->CHEP4R);
+  printf("CHEP5R == %.8lX\r\n", USB_DRD_FS_NS->CHEP5R);
+  printf("CHEP6R == %.8lX\r\n", USB_DRD_FS_NS->CHEP6R);
+  printf("CHEP7R == %.8lX\r\n", USB_DRD_FS_NS->CHEP7R);
   while (1) {
     tud_task(); // tinyusb device task
     led_blinking_task();
@@ -112,12 +208,11 @@ void cdc_task(void) {
       // read data
       char buf[64];
       uint32_t count = tud_cdc_read(buf, sizeof(buf));
-      (void) count;
 
-      // Echo back
-      // Note: Skip echo by commenting out write() and write_flush()
-      // for throughput test e.g
-      //    $ dd if=/dev/zero of=/dev/ttyACM0 count=10000
+      for (uint32_t i=0; i<count; i++)
+      {
+        buf[i] = buf[i] ^ 0x20;
+      }
       tud_cdc_write(buf, count);
       tud_cdc_write_flush();
     }
