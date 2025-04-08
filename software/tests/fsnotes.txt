@@ -1,0 +1,23 @@
+
+# make a floppy image:
+# dd if=/dev/zero of=floppy.img bs=512 count=2880
+# mkdosfs -F 12 floppy.img
+
+#use losetup to mount an image file
+# losetup -f floppy.img  # makes a device node
+# losetup -l             # list loop devices
+# losetup -d /dev/loop???  # destroys the dev node
+
+# better:
+# partx -a -v fat16.img
+# this creates devs for partitions
+
+# build a FAT partition image
+dd if=/dev/zero of=fat16.img bs=1K count=10K
+parted fat16.img mklabel msdos
+# fdisk fat16.img
+#  p --print partitions
+#  n --new partition
+#  t --change partition type
+#    0e FAT16 LBA
+#    0c FAT32 LBA

@@ -11,27 +11,36 @@
 typedef enum LibraryID
 {
 	LIB_INVALID = 0,
-	LIB_SYSTEM
+	LIB_SYSTEM,
+  LIB_FILE,
 }
 LibraryID;
 
-typedef struct Version Version;
-struct Version
+typedef struct LibraryInfo LibraryInfo;
+struct LibraryInfo
 {
-	uint8_t major;
-	uint8_t minor;
-	uint8_t patch;
-	uint8_t unused;
+  uint8_t id;
+  uint8_t major_version;
+  uint8_t minor_version;
+  uint8_t patch_version;
 };
 
-typedef struct SystemCalls SystemCalls;
-struct SystemCalls
+typedef struct SystemLib SystemLib;
+struct SystemLib
 {
-	Version version;
+  LibraryInfo info;
+  void *(*FindLibrary)(uint8_t id, uint8_t major_version);
 
-	void * (*FindLibrary)(LibraryID id, uint8_t major_version);
+  void *(*FastAlloc)(int bytes);
+  void (*FastFree)(void *ptr);
+
+  bool (*SDCardIsInserted)(void);
+  int (*SDCardInitialize)(void);
+  int (*SDCardReadBlock)(int32_t block, uint8_t data_out[512]);
+  int (*SDCardWriteBlock)(int32_t block, uint8_t data_in[512]);
 
 };
 
-extern SystemCalls *system;
+extern const SystemLib *system;
+// const SystemLib *system = (SystemLib *)0x08000400;
 
