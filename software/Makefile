@@ -118,16 +118,16 @@ LIBS := \
 -lc \
 -lnosys
 
-all: cdc_msc.elf cdc_msc.bin
+all: build/cdc_msc.bin
 
-cdc_msc.elf: $(OBJS)
-	$(CC) $(CC_OPTS) $(LD_OPTS) -o cdc_msc.elf \
+build/cdc_msc.elf: $(OBJS)
+	$(CC) $(CC_OPTS) $(LD_OPTS) -o build/cdc_msc.elf \
 	external/STM32H5xx/Source/Templates/gcc/startup_stm32h503xx.s \
 	$(OBJS) \
 	$(LIBS)
 
-cdc_msc.bin: cdc_msc.elf
-	arm-none-eabi-objcopy -O binary cdc_msc.elf cdc_msc.bin
+build/%.bin: build/%.elf
+	arm-none-eabi-objcopy -O binary $^ $@
 
 
 build/obj/%.o: %.c | Makefile

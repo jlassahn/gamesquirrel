@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#pragma GCC optimize ("-fno-strict-aliasing")
+
 int main(void)
 {
 	//hw_init();

@@ -39,7 +39,7 @@ module Button()
 
 module PCB()
 {
-    color("#208020")cube([60,70,1.6]);
+    color("#208020")cube([69,75,1.6]);
 }
 
 module Battery()
@@ -211,7 +211,7 @@ module Nut()
 
 union()
 {
-    translate([7,4,8]) PCB();
+    translate([2.5,2.5,8]) PCB();
     translate([14, 12, 9.7]) Joystick();
     translate([4, 34, 14.2]) Display();
     translate([48, 12, 9.7]) Button();
