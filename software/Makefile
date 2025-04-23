@@ -61,7 +61,6 @@ LD_OPTS = \
 -Wl,--cref \
 -Wl,-gc-sections \
 -Wl,--print-memory-usage \
--Wl,--no-warn-rwx-segment \
 -nostdlib \
 -nostartfiles \
 --specs=nosys.specs \
