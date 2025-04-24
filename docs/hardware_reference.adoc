@@ -1,0 +1,20 @@
+= GameSquirrel Hardware Reference
+Jeff Lassahn
+0.1.0, February 23,2025
+:copyright: 2025 Jeff Lassahn
+:doctype: book
+:toc: left
+:toc-title: Table of Contents
+:title-page:
+
+[preface]
+== Preface
+
+TODO This is a book describing the GameSquirrel hardware.
+
+== A Chapter
+
+TODO Chapter 1
+
+
+

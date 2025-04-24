@@ -1,0 +1,38 @@
+= GameSquirrel System Internals
+Jeff Lassahn
+0.1.0, February 23,2025
+:copyright: 2025 Jeff Lassahn
+:doctype: book
+:toc: left
+:toc-title: Table of Contents
+:title-page:
+
+[preface]
+== Preface
+
+TODO This is a book describing the details of the GameSquirrel system software.
+
+== Memory Organization
+
+The GameSquirrel has three kinds of system memory:
+* 272KBytes of fast SRAM.
+* 512KBytes of Flash ROM 
+* 4MBytes of slow RAM.
+
+=== Slow RAM
+
+The main memory of the GameSquirrel is a serial RAM chip which provides 4
+Megabytes of space.  The game's code and general data are loaded here by
+the system software.
+
+The maximum speed of the main memory is about 48 Megabytes per second, which
+is much slower than the 240MHz main processor.
+
+
+Memory map
+
+0x9000_0000 ... 0x903F_FFFF Slow memory data image
+0x2000_0000 ... 0x2004_3FFF Fast SRAM
+0x0800_0000 ... 0x0807_FFFF Flash ROM
+0x0400_0000 ... 0x043F_FFFF Slow memory code image
+

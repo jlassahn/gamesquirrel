@@ -1,0 +1,51 @@
+= GameSquirrel User's Guide
+Jeff Lassahn
+0.1.0, February 23,2025
+:copyright: 2025 Jeff Lassahn
+:doctype: book
+:toc: left
+:toc-title: Table of Contents
+:title-page:
+
+[preface]
+== Preface
+
+TODO This is the user manual.
+
+== A Chapter
+
+TODO Chapter 1
+
+* plug stuff in
+	* game card (which is a standard SD card)
+	* headphones
+	* Charging with USB (USB might do data things but not usually.)
+* Turn it on
+* Buttons and Joystick
+	* Joystick button is the same as Button A
+* Indicator Lights
+	* Charging
+	* Game Status
+
+Details of SD cards
+* games can write data (saved games, high scores, etc) to their card.
+	* Game will ignore any Write Protect switch on the card
+
+Downloading games from the Interwebz
+* copy data files ont SD card
+	* keep the same exact names for files
+	* in the root directory, don't make subdirectories
+* kinds of SD cards that are compatible
+	* microSD adapters should work
+	* Standard Capacity SDSC and High Capacity SDHC cards should work
+	* SDUC won't
+	* FIXME what about SDXC?
+	* Formatted as MBR partition table, FAT16 or FAT32 filesystem.
+
+Troubleshooting...
+
+
+
+
+
+
