@@ -77,3 +77,7 @@ build/obj/%.o: %.c tools/compile_settings.mk
 	mkdir -p $(@D)
 	$(CC) $(CC_OPTS) -c -o $@ $<
 
+build/include/%.h: include/%.h
+	mkdir -p $(@D)
+	cp $< $@
+

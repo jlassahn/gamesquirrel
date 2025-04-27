@@ -4,6 +4,7 @@ docs/game_programmer_guide.pdf \
 docs/hardware_reference.pdf \
 docs/system_internals.pdf \
 docs/user_guide.pdf \
+include/gamesquirrel/system.h \
 README.txt
 
 
