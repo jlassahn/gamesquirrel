@@ -1,6 +1,7 @@
 
 #include "stm32h503xx.h"
 #include "stm32h5xx_hal.h"
+#include "gamesquirrel/usb.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -13,9 +14,9 @@ static const uint32_t blink_interval_ms = 250;
 #define LED_STATE_ON          1
 
 // Button
-#define BUTTON_PORT           GPIOA
-#define BUTTON_PIN            GPIO_PIN_0
-#define BUTTON_STATE_ACTIVE   0
+#define BUTTON_PORT           GPIOC
+#define BUTTON_PIN            GPIO_PIN_13
+#define BUTTON_STATE_ACTIVE   1
 
 // UART Enable for STLink VCOM
 #define UART_DEV              USART3
@@ -33,13 +34,76 @@ uint32_t board_button_read(void);
 int board_uart_read(uint8_t *buf, int len);
 int board_uart_write(void const *buf, int len);
 uint32_t board_millis(void);
-void led_blinking_task(void);
+
+void hw_init(void);
+void board_init(void);
 
 UART_HandleTypeDef UartHandle;
 
-//--------------------------------------------------------------------+
-// RCC Clock
-//--------------------------------------------------------------------+
+int board_uart_read(uint8_t* buf, int len) {
+  (void) buf;
+  (void) len;
+  return 0;
+}
+
+int board_uart_write(void const* buf, int len) {
+  HAL_UART_Transmit(&UartHandle, (uint8_t*) (uintptr_t) buf, len, 0xffff);
+  return len;
+}
+
+void board_led_write(bool state) {
+  GPIO_PinState pin_state = (GPIO_PinState) (state ? LED_STATE_ON : (1 - LED_STATE_ON));
+  HAL_GPIO_WritePin(LED_PORT, LED_PIN, pin_state);
+}
+
+uint32_t board_button_read(void) {
+	int val = HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN);
+  return val;
+}
+
+volatile uint32_t system_ticks = 0;
+
+void SysTick_Handler(void) {
+  system_ticks++;
+  HAL_IncTick();
+}
+
+uint32_t board_millis(void) {
+  return system_ticks;
+}
+
+void HardFault_Handler(void) {
+  __asm("BKPT #0\n");
+}
+
+// FIXME why does this get optimized out if not marked used?
+int _write(int fhdl, const char *buf, size_t count) __attribute__ ((used));
+int _read(int fhdl, char *buf, size_t count) __attribute__ ((used));
+
+// Default logging with on-board UART
+int _write (int fhdl, const char *buf, size_t count) {
+  (void) fhdl;
+  return board_uart_write(buf, (int) count);
+}
+
+int _read (int fhdl, char *buf, size_t count) {
+  (void) fhdl;
+  int rd = board_uart_read((uint8_t*) buf, (int) count);
+  return (rd > 0) ? rd : -1;
+}
+
+// Required by __libc_init_array in startup code if we are compiling using
+// -nostdlib/-nostartfiles.
+void _init(void) {
+}
+
+void hw_init(void)
+{
+  board_init();
+
+  usb_init();
+}
+
 static inline void SystemClock_Config(void) {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -98,20 +162,18 @@ static inline void SystemClock_Config(void) {
   HAL_RCCEx_PeriphCLKConfig(&usb_clk);
 
   /* Peripheral clock enable */
-  __HAL_RCC_USB_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
+
 }
 
 void board_init(void) {
   HAL_Init();
   SystemClock_Config();
   SystemCoreClockUpdate();
-
-  // Enable All GPIOs clocks
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
 
   // 1ms tick timer
   SysTick_Config(SystemCoreClock / 1000);
@@ -134,9 +196,8 @@ void board_init(void) {
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(BUTTON_PORT, &GPIO_InitStruct);
 
-  UART_CLK_EN();
-
   // UART
+  UART_CLK_EN();
   GPIO_InitStruct.Pin = UART_TX_PIN | UART_RX_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -157,6 +218,8 @@ void board_init(void) {
   };
   HAL_UART_Init(&UartHandle);
 
+  // USB
+  __HAL_RCC_USB_CLK_ENABLE();
   // Configure USB DM and DP pins. This is optional, and maintained only for user guidance.
   GPIO_InitStruct.Pin = (GPIO_PIN_11 | GPIO_PIN_12);
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -164,8 +227,6 @@ void board_init(void) {
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* Peripheral clock enable */
-  __HAL_RCC_USB_CLK_ENABLE();
 
   /* Enable VDDUSB */
   #if defined (PWR_USBSCR_USB33DEN)
@@ -173,159 +234,46 @@ void board_init(void) {
   #endif
 }
 
-int board_uart_read(uint8_t* buf, int len) {
-  (void) buf;
-  (void) len;
-  return 0;
-}
-
-int board_uart_write(void const* buf, int len) {
-  HAL_UART_Transmit(&UartHandle, (uint8_t*) (uintptr_t) buf, len, 0xffff);
-  return len;
-}
-
-void board_led_write(bool state) {
-  GPIO_PinState pin_state = (GPIO_PinState) (state ? LED_STATE_ON : (1 - LED_STATE_ON));
-  HAL_GPIO_WritePin(LED_PORT, LED_PIN, pin_state);
-}
-
-uint32_t board_button_read(void) {
-  return BUTTON_STATE_ACTIVE == HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN);
-}
-
-volatile uint32_t system_ticks = 0;
-
-void SysTick_Handler(void) {
-  system_ticks++;
-  HAL_IncTick();
-}
-
-uint32_t board_millis(void) {
-  return system_ticks;
-}
-
-void HardFault_Handler(void) {
-  __asm("BKPT #0\n");
-}
-
-//--------------------------------------------------------------------+
-// newlib read()/write() retarget
-//--------------------------------------------------------------------+
-// FIXME why does this get optimized out if not marked used?
-int _write(int fhdl, const char *buf, size_t count) __attribute__ ((used));
-int _read(int fhdl, char *buf, size_t count) __attribute__ ((used));
-
-// Default logging with on-board UART
-int _write (int fhdl, const char *buf, size_t count) {
-  (void) fhdl;
-  return board_uart_write(buf, (int) count);
-}
-
-int _read (int fhdl, char *buf, size_t count) {
-  (void) fhdl;
-  int rd = board_uart_read((uint8_t*) buf, (int) count);
-  return (rd > 0) ? rd : -1;
-}
-
-// Required by __libc_init_array in startup code if we are compiling using
-// -nostdlib/-nostartfiles.
-void _init(void) {
-}
-
-void hw_init(void)
-{
-  board_init();
-
-  #define FSDEV_REG USB_DRD_FS_NS
-  #define USB_CNTR_FRES USB_CNTR_USBRST
-  #define FSDEV_EP_COUNT 8
-
-  // Follow the RM mentions to use a special ordering of PDWN and FRES
-  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
-    asm("NOP");
-  }
-
-  // Perform USB peripheral reset
-  FSDEV_REG->CNTR = USB_CNTR_FRES | USB_CNTR_PDWN;
-  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
-    asm("NOP");
-  }
-
-  FSDEV_REG->CNTR &= ~USB_CNTR_PDWN;
-
-  // Wait startup time, for F042 and F070, this is <= 1 us.
-  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
-    asm("NOP");
-  }
-  FSDEV_REG->CNTR = 0; // Enable USB
-
-  // FIXME for some reason if I don't read back CNTR the CHEP registers don't
-  // work.  WTF?  Is this a hardware quirk or a problem with compiler
-  // optimization?  Maybe a compiler optimization issue, since removing the
-  // volatile below prevents it from working.
-  volatile uint32_t reg = FSDEV_REG->CNTR;
-  (void)reg;
-
-  FSDEV_REG->ISTR = 0; // Clear pending interrupts
-
-  // Reset endpoints to disabled
-  //for (uint32_t i = 0; i < FSDEV_EP_COUNT; i++) {
-    // This doesn't clear all bits since some bits are "toggle", but does set the type to DISABLED.
-    //ep_write(i, 0u, false);
-    //FSDEV_REG->ep[i].reg = (fsdev_bus_t) 0;
-    FSDEV_REG->CHEP0R = 0;
-    FSDEV_REG->CHEP1R = 0;
-    FSDEV_REG->CHEP2R = 0;
-    FSDEV_REG->CHEP3R = 0;
-    FSDEV_REG->CHEP4R = 0;
-    FSDEV_REG->CHEP5R = 0;
-    FSDEV_REG->CHEP6R = 0;
-    FSDEV_REG->CHEP7R = 0;
-  //}
-
-  FSDEV_REG->CHEP0R = 0x2220;
-
-
-  //handle_bus_reset(rhport);
-    // Set up endpoint registers
-    //FSDEV_REG->DADDR = 0u; // disable USB Function
-    FSDEV_REG->DADDR = USB_DADDR_EF; // Enable USB Function
-
-  // Enable pull-up if supported
-  //dcd_connect(rhport);
-    FSDEV_REG->BCDR |= USB_BCDR_DPPU;
-}
-
 int main(void) {
 
   hw_init();
   printf("Hello, world\r\n");
-  printf("CHEP0R == %.8lX\r\n", USB_DRD_FS_NS->CHEP0R);
-  printf("CHEP1R == %.8lX\r\n", USB_DRD_FS_NS->CHEP1R);
-  printf("CHEP2R == %.8lX\r\n", USB_DRD_FS_NS->CHEP2R);
-  printf("CHEP3R == %.8lX\r\n", USB_DRD_FS_NS->CHEP3R);
-  printf("CHEP4R == %.8lX\r\n", USB_DRD_FS_NS->CHEP4R);
-  printf("CHEP5R == %.8lX\r\n", USB_DRD_FS_NS->CHEP5R);
-  printf("CHEP6R == %.8lX\r\n", USB_DRD_FS_NS->CHEP6R);
-  printf("CHEP7R == %.8lX\r\n", USB_DRD_FS_NS->CHEP7R);
 
-  while (true) {
-    led_blinking_task();
+	extern const uint8_t config_descriptor[];
+	for (int i=0; i<75; i++)
+	{
+		printf(" %.2X,", config_descriptor[i]);
+		if ((i&7) == 7)
+			printf("\r\n");
+	}
+	printf("\r\n");
+
+  bool usb_enable = false;
+  bool led_state = false;
+  uint32_t last_ms = board_millis();
+  while (true)
+  {
+	if (usb_enable)
+	{
+		usb_tick();
+	}
+	else
+	{
+		if (board_button_read())
+		{
+			usb_start();
+			usb_enable = true;
+		}
+	}
+
+    uint32_t ms = board_millis();
+    if (ms - last_ms < blink_interval_ms)
+      continue;
+	last_ms = ms;
+
+    board_led_write(led_state);
+    led_state = 1 - led_state; // toggle
+
   }
 }
 
-
-//--------------------------------------------------------------------+
-// BLINKING TASK
-//--------------------------------------------------------------------+
-void led_blinking_task(void) {
-  static uint32_t start_ms = 0;
-  static bool led_state = false;
-
-  // Blink every interval ms
-  if (board_millis() - start_ms < blink_interval_ms) return; // not enough time
-  start_ms += blink_interval_ms;
-
-  board_led_write(led_state);
-  led_state = 1 - led_state; // toggle
-}

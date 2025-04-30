@@ -49,6 +49,8 @@ CC_OPTS := \
 -Iexternal/CMSIS/Core/Include \
 -Iexternal/STM32H5xx/Include \
 -Iexternal/STM32H5xx_HAL_Driver/Inc \
+-Isrc \
+-Iinclude \
 -Isrc/system \
 -Isrc/usb_example
 

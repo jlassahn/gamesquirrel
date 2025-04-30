@@ -123,14 +123,15 @@ int main(void) {
 
   hw_init();
   printf("Hello, world\r\n");
-  printf("CHEP0R == %.8lX\r\n", USB_DRD_FS_NS->CHEP0R);
-  printf("CHEP1R == %.8lX\r\n", USB_DRD_FS_NS->CHEP1R);
-  printf("CHEP2R == %.8lX\r\n", USB_DRD_FS_NS->CHEP2R);
-  printf("CHEP3R == %.8lX\r\n", USB_DRD_FS_NS->CHEP3R);
-  printf("CHEP4R == %.8lX\r\n", USB_DRD_FS_NS->CHEP4R);
-  printf("CHEP5R == %.8lX\r\n", USB_DRD_FS_NS->CHEP5R);
-  printf("CHEP6R == %.8lX\r\n", USB_DRD_FS_NS->CHEP6R);
-  printf("CHEP7R == %.8lX\r\n", USB_DRD_FS_NS->CHEP7R);
+
+	extern uint8_t const desc_fs_configuration[];
+	for (int i=0; i<75; i++)
+	{
+		printf(" %.2X,", desc_fs_configuration[i]);
+		if ((i&7) == 7)
+			printf("\r\n");
+	}
+	printf("\r\n");
 
   // init device stack on configured roothub port
   tusb_rhport_init_t dev_init = {
