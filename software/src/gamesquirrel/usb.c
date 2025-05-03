@@ -1,6 +1,8 @@
 
 #include "stm32h503xx.h"
 #include "gamesquirrel/usb.h"
+#include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -12,6 +14,7 @@ struct UsbState
 	int setup_count;
 	int setup_rx_count;
 	int usb_address;
+	int active;
 };
 
 typedef struct UsbSetupPacket UsbSetupPacket;
@@ -29,7 +32,7 @@ const uint8_t device_descriptor[] =
 {
 	18, //bLength
 	0x01, //bDescriptorType
-	0x00, 0x02, //bcdUSB
+	0x00, 0x02, //bcdUSB    // FIXME consider reporting v1.x so we don't have to respond to high-speed queries
 	0x00, //bDeviceClass
 	0x00, //bDeviceSubclass
 	0x00, //bDeviceProtocol
@@ -305,10 +308,14 @@ static void send_setup(void)
 		usb_state.setup_count = 0;
 		usb_state.setup_data = NULL;
 	}
-
-	printf("t\r\n");
-	//printf(" ...sending %d bytes %p [%.8lX %.8lX]\r\n", (int)count, data, tx0[0], tx0[1]);
 	USB_DRD_PMA_BUFF[0].TXBD = (count << 16) | 0x00000040;
+	SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
+}
+
+static void send_empty_setup(void)
+{
+	USB_DRD_PMA_BUFF[0].TXBD = 0 | 0x00000040;
+	SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
 }
 
 static void usb_transfer(void)
@@ -326,160 +333,123 @@ static void usb_transfer(void)
 		ClearChannelFlag(&USB_DRD_FS->CHEP0R, USB_CHEP_VTRX);
 		if (val & USB_CHEP_SETUP)
 		{
-			putchar('S');
-			//printf("setup\r\n");
 			usb_state.scratch[0] = rx0[0];
 			usb_state.scratch[1] = rx0[1];
 			UsbSetupPacket *setup = (UsbSetupPacket *)usb_state.scratch;
 
-			switch (setup->request)
+			if ((setup->request & 0x0080) == 0) // OUT data
 			{
-				case 0x0500: // SET_ADDRESS
-					printf("->sa\r\n");
+				if (setup->request == 0x0500) // SET_ADDRESS
+				{
 					usb_state.usb_address = setup->value & 0x7F;
-					usb_state.setup_data = (const uint8_t *)zeros;
-					usb_state.setup_count = 0;
-					send_setup();
-					SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
-					break;
+				}
+				else if (setup->request == 0x0900) // SET_CONFIGURATION
+				{
+					usb_state.active = true;
+				}
 
-				case 0x0680: // GET_DESCRIPTOR
-					printf("->gd\r\n");
+				if (setup->length == 0)
+				{
+					send_empty_setup();
+				}
+				else
+				{
+					usb_state.setup_rx_count = setup->length;
+				}
+
+			}
+			else // IN data
+			{
+				if (setup->request == 0x0680) // GET_DESCRIPTOR
+				{
+					const uint8_t *data = (const uint8_t *)zeros;
+					int length = 0;
 					if (setup->value == 0x0100)
 					{
-						usb_state.setup_data = device_descriptor;
-						usb_state.setup_count = sizeof(device_descriptor);
-						if (setup->length < usb_state.setup_count)
-							usb_state.setup_count = setup->length;
-						send_setup();
-						SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
+						data = device_descriptor;
+						length = sizeof(device_descriptor);
 					}
 					else if (setup->value == 0x0200)
 					{
-						usb_state.setup_data = config_descriptor;
-						usb_state.setup_count = sizeof(config_descriptor);
-						if (setup->length < usb_state.setup_count)
-							usb_state.setup_count = setup->length;
-						send_setup();
-						SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
+						data = config_descriptor;
+						length = sizeof(config_descriptor);
 					}
 					else if ((setup->value & 0xFF00) == 0x0300)
 					{
 						int n = setup->value & 0xFF;
 						if (n <= stringCount)
 						{
-							usb_state.setup_data = (const uint8_t *)strings[n];
-							usb_state.setup_count = strings[n][0] & 0xFF;
-							if (setup->length < usb_state.setup_count)
-								usb_state.setup_count = setup->length;
-							send_setup();
-							SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
+							data = (const uint8_t *)strings[n];
+							length = strings[n][0] & 0xFF;
 						}
-
 					}
-					else
-					{
-						printf("unknown descriptor %.4X\r\n", setup->value);
-					}
-					// setup->value is descriptor type and index
-					// setup->index is language ID
-					// setup->length is max transfer length
-					break;
 
-				case 0x0900: // SET_CONFIGURATION
-					printf("->sc\r\n");
+					usb_state.setup_data = data;
+					usb_state.setup_count = length;
+				}
+				else
+				{
 					usb_state.setup_data = (const uint8_t *)zeros;
 					usb_state.setup_count = 0;
-					send_setup();
-					SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
-					break;
-
-				case 0x2221: //SET_CONTROL_LINE_STATE
-					printf("Set Control Line State %d\r\n", setup->length);
-					usb_state.setup_data = (const uint8_t *)zeros;
-					usb_state.setup_count = 0;
-					send_setup();
-					SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
-					break;
-
-				case 0x2021: //SET_LINE_CODING
-					printf("Set Control Line Coding %d\r\n", setup->length);
-					usb_state.setup_rx_count = setup->length;
-					break;
-
-				case 0x2321: //SEND_BREAK
-					printf("Send Break %d\r\n", setup->length);
-					usb_state.setup_data = (const uint8_t *)zeros;
-					usb_state.setup_count = 0;
-					send_setup();
-					SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
-					break;
-
-				// Device Requests
-				case 0x0080: // GET_STATUS
-				case 0x0100: // CLEAR_FEATURE
-				case 0x0300: // SET_FEATURE
-				case 0x0700: // SET_DESCRIPTOR
-				case 0x0880: // GET_CONFIGURATION
-
-				// Interface Requests
-				case 0x0081: // GET_STATUS
-				case 0x0181: // CLEAR_FEATURE
-				case 0x0301: // SET_FEATURE
-				case 0x0A81: // GET_INTERFACE
-				case 0x1101: // SET_INTERFACE
-
-				// Endpoint Requests
-				case 0x0082: // GET_STATUS
-				case 0x0102: // CLEAR_FEATURE
-				case 0x0302: // SET_FEATURE
-				case 0x1282: // SYNCH_FRAME
-
-				default:
-					printf("unknown request %.4X\r\n", setup->request);
+				}
+				if (setup->length < usb_state.setup_count)
+					usb_state.setup_count = setup->length;
+				send_setup();
 			}
+
+			// CDC specific commands
+			// case 0x2221: //SET_CONTROL_LINE_STATE
+			// case 0x2021: //SET_LINE_CODING
+			// case 0x2321: //SEND_BREAK
+
+			// Device Requests
+			// case 0x0080: // GET_STATUS
+			// case 0x0100: // CLEAR_FEATURE
+			// case 0x0300: // SET_FEATURE
+			// case 0x0700: // SET_DESCRIPTOR
+			// case 0x0880: // GET_CONFIGURATION
+
+			// Interface Requests
+			// case 0x0081: // GET_STATUS
+			// case 0x0181: // CLEAR_FEATURE
+			// case 0x0301: // SET_FEATURE
+			// case 0x0A81: // GET_INTERFACE
+			// case 0x1101: // SET_INTERFACE
+
+			// Endpoint Requests
+			// case 0x0082: // GET_STATUS
+			// case 0x0102: // CLEAR_FEATURE
+			// case 0x0302: // SET_FEATURE
+			// case 0x1282: // SYNCH_FRAME
 		}
 		else
 		{
-			printf("Rx\r\n");
 			if (usb_state.setup_rx_count > 0)
 			{
 				uint32_t reg = USB_DRD_PMA_BUFF[0].RXBD;
 				int length = (reg >> 16) & 0x3FF;
-				printf("expecting %d received %d\r\n", usb_state.setup_rx_count, length);
-				if (length > usb_state.setup_rx_count)
-					usb_state.setup_rx_count = 0;
-				else
-					usb_state.setup_rx_count -= length;
-
-				if (usb_state.setup_rx_count == 0)
+				if (length >= usb_state.setup_rx_count)
 				{
-					usb_state.setup_data = (const uint8_t *)zeros;
-					usb_state.setup_count = 0;
-					send_setup();
-					SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
+					usb_state.setup_rx_count = 0;
+					send_empty_setup();
+				}
+				else
+				{
+					usb_state.setup_rx_count -= length;
 				}
 			}
-			// FIXME cases to handle
-			// ACK after end of IN control sequence
-			//     udate usb_address if needed
-			// handle data from OUT control sequence, ACK when done
 		}
 		SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_RX_STRX);
 	}
 	if (val & USB_CHEP_VTTX)
 	{
 		ClearChannelFlag(&USB_DRD_FS->CHEP0R, USB_CHEP_VTTX);
-		//printf("Tx");
 		if (usb_state.setup_data != NULL)
 		{
-			//printf("->c\r\n");
 			send_setup();
-			SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
 		}
 		else
 		{
-			//printf("->d\r\n");
 			USB_DRD_FS->DADDR = USB_DADDR_EF | usb_state.usb_address;
 		}
 	}
