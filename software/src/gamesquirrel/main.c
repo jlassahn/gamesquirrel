@@ -256,6 +256,14 @@ int main(void) {
 	if (usb_enable)
 	{
 		usb_tick();
+		static char buff[16];
+		int length = usb_receive(buff, 16);
+		if (length > 0)
+		{
+			for (int i=0; i<length; i++)
+				buff[i] = buff[i] ^ 0x20;
+			usb_send(buff, length);
+		}
 	}
 	else
 	{

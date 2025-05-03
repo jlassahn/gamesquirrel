@@ -1,6 +1,7 @@
 
 #include "stm32h503xx.h"
 #include "gamesquirrel/usb.h"
+#include "gamesquirrel/charqueue.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -9,6 +10,8 @@
 typedef struct UsbState UsbState;
 struct UsbState
 {
+	CharQueue rx_queue;
+	CharQueue tx_queue;
 	uint32_t scratch[4]; // staging area for data to go to or from USB SRAM
 	const uint8_t *setup_data;
 	int setup_count;
@@ -322,7 +325,6 @@ static void usb_transfer(void)
 {
 	uint32_t *usb_memory = (uint32_t *)USB_DRD_PMA_BUFF;
 	volatile uint32_t *rx0 = &usb_memory[0x12];
-	volatile uint32_t *tx1 = &usb_memory[0x14];
 	volatile uint32_t *rx1 = &usb_memory[0x18];
 
 	// FIXME data in USB SRAM might be up to 800ns later than receive complete interrupt.
@@ -458,18 +460,22 @@ static void usb_transfer(void)
 	if (val & USB_CHEP_VTRX)
 	{
 		ClearChannelFlag(&USB_DRD_FS->CHEP1R, USB_CHEP_VTRX);
+
 		printf("Endpoint 1 Rx\r\n");
 		uint32_t reg = USB_DRD_PMA_BUFF[1].RXBD;
 		int length = (reg >> 16) & 0x3FF;
-		printf("Rx length = %d [%.8lX %.8lX]\r\n",
-				length, rx1[0], rx1[1]);
+		usb_state.scratch[0] = rx1[0];
+		usb_state.scratch[1] = rx1[1];
+		usb_state.scratch[2] = rx1[2];
+		usb_state.scratch[3] = rx1[3];
+
+		CharQueue_Write(&usb_state.rx_queue, (char *)usb_state.scratch, length);
 		SetChannelToggle(&USB_DRD_FS->CHEP1R, USB_CHEP_RX_STRX);
 	}
 	if (val & USB_CHEP_VTTX)
 	{
 		ClearChannelFlag(&USB_DRD_FS->CHEP1R, USB_CHEP_VTTX);
 		printf("Endpoint 1 Tx\r\n");
-		(void)tx1;
 	}
 }
 
@@ -535,5 +541,35 @@ void usb_tick(void)
 
 	// USB_ISTR_DDISC should be host-mode only
 	// USB_ISTR_THR512 not used here
+
+	// If data endpoint TX buffer is empty...
+	// Checking for this here instead of in usb_transfer because if the
+	// tx path has been idle we will have already received and cleared the
+	// transfer complete interrupt before there is new data to transmit.
+	if ((USB_DRD_FS->CHEP1R & USB_CHEP_TX_STTX) == USB_EP_TX_NAK)
+	{
+		int length = CharQueue_Read(&usb_state.tx_queue, (char *)usb_state.scratch, 16);
+		if (length > 0)
+		{
+			volatile uint32_t *usb_memory = (uint32_t *)USB_DRD_PMA_BUFF;
+			volatile uint32_t *tx1 = &usb_memory[0x14];
+			tx1[0] = usb_state.scratch[0];
+			tx1[1] = usb_state.scratch[1];
+			tx1[2] = usb_state.scratch[2];
+			tx1[3] = usb_state.scratch[3];
+			USB_DRD_PMA_BUFF[1].TXBD = (length << 16) | 0x00000050;
+			SetChannelToggle(&USB_DRD_FS->CHEP1R, USB_CHEP_TX_STTX);
+		}
+	}
+}
+
+int usb_send(const char *data, int max_bytes)
+{
+	return CharQueue_Write(&usb_state.tx_queue, data, max_bytes);
+}
+
+int usb_receive(char *data, int max_bytes)
+{
+	return CharQueue_Read(&usb_state.rx_queue, data, max_bytes);
 }
 

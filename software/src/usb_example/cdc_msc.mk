@@ -41,13 +41,13 @@ src/usb_example/main.c \
 src/usb_example/msc_disk.c \
 src/usb_example/usb_descriptors.c
 
-CDC_OBJS := $(addprefix build/obj/, $(addsuffix .o, $(basename $(CDC_SRCS))))
+CDC_OBJS := $(addprefix build/obj/armsys/, $(addsuffix .o, $(basename $(CDC_SRCS))))
 
 build/cdc_msc.elf: $(CDC_OBJS)
-	$(CC) $(CC_OPTS) $(LD_OPTS) \
+	$(CC_ARMSYS) $(CC_ARMSYS_OPTS) $(LD_ARMSYS_OPTS) \
 	-Wl,-Map=build/cdc_msc.elf.map \
 	-o build/cdc_msc.elf \
 	external/STM32H5xx/Source/Templates/gcc/startup_stm32h503xx.s \
 	$(CDC_OBJS) \
-	$(LIBS)
+	$(LIBS_ARMSYS)
 

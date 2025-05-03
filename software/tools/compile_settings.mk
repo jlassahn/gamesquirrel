@@ -1,7 +1,7 @@
 
-CC := arm-none-eabi-gcc
+CC_ARMSYS := arm-none-eabi-gcc
 
-CC_OPTS := \
+CC_ARMSYS_OPTS := \
 -DSTM32H503xx \
 -DHSE_VALUE=24000000 \
 -DCFG_TUSB_MCU=OPT_MCU_STM32H5 \
@@ -55,7 +55,7 @@ CC_OPTS := \
 -Isrc/usb_example
 
 
-LD_OPTS := \
+LD_ARMSYS_OPTS := \
 -Wl,--cref \
 -Wl,-gc-sections \
 -Wl,--print-memory-usage \
@@ -64,20 +64,43 @@ LD_OPTS := \
 --specs=nosys.specs \
 -Wl,-T,src/system/STM32H503xx_FLASH.ld
 
-LIBS := \
+LIBS_ARMSYS := \
 -lgcc \
 -lm \
 -lc \
 -lnosys
 
+CC_HOST := gcc
+
+CC_HOST_OPTS := \
+-Wall \
+-Wextra \
+-Werror \
+-O3 \
+-g \
+-I src \
+-I include
+
+
+LD_HOST_OPTS :=
+
+LIBS_HOST := -lm -lc
+
 
 build/%.bin: build/%.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
-
-build/obj/%.o: %.c tools/compile_settings.mk
+build/obj/armsys/%.o: %.c tools/compile_settings.mk
 	mkdir -p $(@D)
-	$(CC) $(CC_OPTS) -c -o $@ $<
+	$(CC_ARMSYS) $(CC_ARMSYS_OPTS) -c -o $@ $<
+
+build/obj/armsys/%.o: %.s tools/compile_settings.mk
+	mkdir -p $(@D)
+	$(CC_ARMSYS) $(CC_ARMSYS_OPTS) -c -o $@ $<
+
+build/obj/host/%.o: %.c tools/compile_settings.mk
+	mkdir -p $(@D)
+	$(CC_HOST) $(CC_HOST_OPTS) -c -o $@ $<
 
 build/include/%.h: include/%.h
 	mkdir -p $(@D)
