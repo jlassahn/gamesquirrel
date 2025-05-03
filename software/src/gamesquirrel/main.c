@@ -101,7 +101,7 @@ void hw_init(void)
 {
   board_init();
 
-  usb_init();
+  UsbInit();
 }
 
 static inline void SystemClock_Config(void) {
@@ -234,54 +234,41 @@ void board_init(void) {
   #endif
 }
 
-int main(void) {
+int main(void)
+{
+	hw_init();
+	UsbStart();
 
-  hw_init();
-  printf("Hello, world\r\n");
-
-	extern const uint8_t config_descriptor[];
-	for (int i=0; i<75; i++)
+	while (!board_button_read())
 	{
-		printf(" %.2X,", config_descriptor[i]);
-		if ((i&7) == 7)
-			printf("\r\n");
 	}
-	printf("\r\n");
 
-  bool usb_enable = false;
-  bool led_state = false;
-  uint32_t last_ms = board_millis();
-  while (true)
-  {
-	if (usb_enable)
+	printf("Hello, world\r\n");
+	UsbSend("Hello USB\r\n", 11);
+
+	bool led_state = false;
+	uint32_t last_ms = board_millis();
+	while (true)
 	{
-		usb_tick();
 		static char buff[16];
-		int length = usb_receive(buff, 16);
+		int length = UsbReceive(buff, 16);
 		if (length > 0)
 		{
 			for (int i=0; i<length; i++)
 				buff[i] = buff[i] ^ 0x20;
-			usb_send(buff, length);
+			UsbSend(buff, length);
+			printf("buff %s\r\n", buff);
 		}
+
+		uint32_t ms = board_millis();
+		if (ms - last_ms < blink_interval_ms)
+			continue;
+		last_ms = ms;
+
+		board_led_write(led_state);
+		led_state = 1 - led_state; // toggle
+
+		printf("interrupts  %d\r\n", UsbInterruptCount());
 	}
-	else
-	{
-		if (board_button_read())
-		{
-			usb_start();
-			usb_enable = true;
-		}
-	}
-
-    uint32_t ms = board_millis();
-    if (ms - last_ms < blink_interval_ms)
-      continue;
-	last_ms = ms;
-
-    board_led_write(led_state);
-    led_state = 1 - led_state; // toggle
-
-  }
 }
 

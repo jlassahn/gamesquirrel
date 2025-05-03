@@ -1,11 +1,12 @@
 
+#pragma GCC optimize ("-fno-strict-aliasing")
+
 #include "stm32h503xx.h"
 #include "gamesquirrel/usb.h"
 #include "gamesquirrel/charqueue.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include <stddef.h>
 
 typedef struct UsbState UsbState;
 struct UsbState
@@ -18,6 +19,7 @@ struct UsbState
 	int setup_rx_count;
 	int usb_address;
 	int active;
+	int interrupts;
 };
 
 typedef struct UsbSetupPacket UsbSetupPacket;
@@ -146,8 +148,6 @@ const uint8_t config_descriptor[] =
 	0
 };
 
-_Static_assert(sizeof(config_descriptor) == 75);
-
 const uint16_t strLangs[] =
 {
 	0x0304, // length 4
@@ -175,6 +175,7 @@ const uint16_t strProduct[] =
 	'g'
 };
 
+// FIXME either use processor serial number or don't provide one
 const uint16_t strSerial[] =
 {
 	0x030E, //length 14
@@ -217,10 +218,7 @@ static inline void SetChannelToggle(volatile uint32_t *chep, uint32_t mask)
 	*chep = val;
 }
 
-
-// FIXME use TitleCase for function names!
-
-void usb_init(void)
+void UsbInit(void)
 {
   // Follow the RM mentions to use a special ordering of PDWN and FRES
   for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
@@ -262,7 +260,7 @@ void usb_init(void)
 
 }
 
-static void usb_reset(void)
+static void UsbReset(void)
 {
 	usb_state.usb_address = 0;
 	usb_state.setup_count = 0;
@@ -284,14 +282,14 @@ static void usb_reset(void)
 	USB_DRD_FS->DADDR = USB_DADDR_EF; // Enable USB Function
 }
 
-static void send_setup(void)
+static void SendSetup(void)
 {
 	volatile uint32_t *usb_memory = (uint32_t *)USB_DRD_PMA_BUFF;
 	volatile uint32_t *tx0 = &usb_memory[0x10];
 
 	// might do misaligned uint32 accesses
 	// might read up to 7 bytes past the end of the valid data
-	const uint32_t *data = (const uint32_t *)usb_state.setup_data;
+	const uint32_t *data = (const uint32_t *)(const void *)usb_state.setup_data;
 	tx0[0] = data[0];
 	tx0[1] = data[1];
 
@@ -303,7 +301,6 @@ static void send_setup(void)
 		count = 8;
 		usb_state.setup_count -= 8;
 		usb_state.setup_data += 8;
-	
 	}
 	else
 	{
@@ -315,19 +312,17 @@ static void send_setup(void)
 	SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
 }
 
-static void send_empty_setup(void)
+static void SendEmptySetup(void)
 {
 	USB_DRD_PMA_BUFF[0].TXBD = 0 | 0x00000040;
 	SetChannelToggle(&USB_DRD_FS->CHEP0R, USB_CHEP_TX_STTX);
 }
 
-static void usb_transfer(void)
+static void UsbTransfer(void)
 {
 	uint32_t *usb_memory = (uint32_t *)USB_DRD_PMA_BUFF;
 	volatile uint32_t *rx0 = &usb_memory[0x12];
 	volatile uint32_t *rx1 = &usb_memory[0x18];
-
-	// FIXME data in USB SRAM might be up to 800ns later than receive complete interrupt.
 
 	uint32_t val = USB_DRD_FS->CHEP0R;
 	if (val & USB_CHEP_VTRX)
@@ -352,7 +347,7 @@ static void usb_transfer(void)
 
 				if (setup->length == 0)
 				{
-					send_empty_setup();
+					SendEmptySetup();
 				}
 				else
 				{
@@ -396,7 +391,7 @@ static void usb_transfer(void)
 				}
 				if (setup->length < usb_state.setup_count)
 					usb_state.setup_count = setup->length;
-				send_setup();
+				SendSetup();
 			}
 
 			// CDC specific commands
@@ -433,7 +428,7 @@ static void usb_transfer(void)
 				if (length >= usb_state.setup_rx_count)
 				{
 					usb_state.setup_rx_count = 0;
-					send_empty_setup();
+					SendEmptySetup();
 				}
 				else
 				{
@@ -448,7 +443,7 @@ static void usb_transfer(void)
 		ClearChannelFlag(&USB_DRD_FS->CHEP0R, USB_CHEP_VTTX);
 		if (usb_state.setup_data != NULL)
 		{
-			send_setup();
+			SendSetup();
 		}
 		else
 		{
@@ -461,7 +456,6 @@ static void usb_transfer(void)
 	{
 		ClearChannelFlag(&USB_DRD_FS->CHEP1R, USB_CHEP_VTRX);
 
-		printf("Endpoint 1 Rx\r\n");
 		uint32_t reg = USB_DRD_PMA_BUFF[1].RXBD;
 		int length = (reg >> 16) & 0x3FF;
 		usb_state.scratch[0] = rx1[0];
@@ -475,75 +469,59 @@ static void usb_transfer(void)
 	if (val & USB_CHEP_VTTX)
 	{
 		ClearChannelFlag(&USB_DRD_FS->CHEP1R, USB_CHEP_VTTX);
-		printf("Endpoint 1 Tx\r\n");
 	}
 }
 
-void usb_start(void)
+void UsbStart(void)
 {
-	printf("USB start\r\n");
-
 	// Enable pull-up
 	USB_DRD_FS->BCDR |= USB_BCDR_DPPU;
-	usb_reset();
+	UsbReset();
+
+	// enable interrupts
+	USB_DRD_FS->CNTR = USB_CNTR_CTRM | USB_CNTR_RESETM;
+	NVIC_EnableIRQ(USB_DRD_FS_IRQn);
 }
 
-void usb_tick(void)
+void USB_DRD_FS_IRQHandler(void)
 {
+	usb_state.interrupts ++;
+
+	// FIXME Chip errata says data in USB SRAM might be up to 800ns later
+	// than receive complete interrupt.  Clock is about 4ns so we want
+	// about 200 instructions of delay.
+	for (int i = 0; i < 50; i++)
+	{
+		asm volatile ("NOP");
+	}
+
 	uint32_t stat = USB_DRD_FS->ISTR;
 	uint32_t clear = (~stat) | 0xFFFC807F;
 	USB_DRD_FS->ISTR = clear;
 
-	// ignore expected start of frame flag USB_ISTR_ESOF;
-	// ignore start of frame flag USB_ISTR_SOF;
+	// ignore expected start of frame flag USB_ISTR_ESOF
+	// ignore start of frame flag USB_ISTR_SOF
+	// ignore suspend flag USB_ISTR_SUSP
+	// ignore wakeup flag USB_ISTR_WKUP
+	// ignore error flag USB_ISTR_ERR (default recovery from errors is good enough)
+	// ignore packet overrun USB_ISTR_PMAOVR (should never happen)
+	// USB_ISTR_DDISC should be host-mode only
+	// USB_ISTR_THR512 not used here
 
 	if (stat & USB_ISTR_RESET)
 	{
 		// handle device leaving reset
-		printf("USB reset\r\n");
-		usb_reset();
-	}
-
-	if (stat & USB_ISTR_SUSP)
-	{
-		// handle device suspend (probably a NOOP)
-		// printf("USB suspend\r\n");
-		printf(".");
-	}
-
-	if (stat & USB_ISTR_WKUP)
-	{
-		// handle wake up from suspend (probably a NOOP)
-		printf("USB wakeup\r\n");
-	}
-
-	if (stat & USB_ISTR_ERR)
-	{
-		// handle error detect (probably a NOOP)
-		printf("USB error\r\n");
-	}
-
-	if (stat & USB_ISTR_PMAOVR)
-	{
-		// packet memory overrun, can't happen if we're set up correctly
-		printf("USB packet overrun\r\n");
+		UsbReset();
 	}
 
 	if (stat & USB_ISTR_CTR)
 	{
 		// handle transfer complete
-		//printf("USB transfer complete\r\n");
-		//printf("{\r\n");
-		usb_transfer();
-		//printf("}\r\n");
-		//printf("final CHEP0R = %.8lX istr = %.8lX\r\n", USB_DRD_FS->CHEP0R, USB_DRD_FS->ISTR);
+		UsbTransfer();
 	}
 
-	// USB_ISTR_DDISC should be host-mode only
-	// USB_ISTR_THR512 not used here
-
 	// If data endpoint TX buffer is empty...
-	// Checking for this here instead of in usb_transfer because if the
+	// Checking for this here instead of in UsbTransfer because if the
 	// tx path has been idle we will have already received and cleared the
 	// transfer complete interrupt before there is new data to transmit.
 	if ((USB_DRD_FS->CHEP1R & USB_CHEP_TX_STTX) == USB_EP_TX_NAK)
@@ -563,13 +541,26 @@ void usb_tick(void)
 	}
 }
 
-int usb_send(const char *data, int max_bytes)
+int UsbSend(const char *data, int max_bytes)
 {
-	return CharQueue_Write(&usb_state.tx_queue, data, max_bytes);
+	int n = CharQueue_Write(&usb_state.tx_queue, data, max_bytes);
+	if (n > 0)
+		NVIC_SetPendingIRQ(USB_DRD_FS_IRQn);
+	return n;
 }
 
-int usb_receive(char *data, int max_bytes)
+int UsbReceive(char *data, int max_bytes)
 {
 	return CharQueue_Read(&usb_state.rx_queue, data, max_bytes);
+}
+
+bool UsbIsActive(void)
+{
+	return usb_state.active;
+}
+
+int UsbInterruptCount(void)
+{
+	return usb_state.interrupts;
 }
 
