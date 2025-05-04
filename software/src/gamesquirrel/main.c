@@ -11,12 +11,10 @@ static const uint32_t blink_interval_ms = 250;
 // LED
 #define LED_PORT              GPIOA
 #define LED_PIN               GPIO_PIN_5
-#define LED_STATE_ON          1
 
 // Button
 #define BUTTON_PORT           GPIOC
 #define BUTTON_PIN            GPIO_PIN_13
-#define BUTTON_STATE_ACTIVE   1
 
 // UART Enable for STLink VCOM
 #define UART_DEV              USART3
@@ -52,13 +50,14 @@ int board_uart_write(void const* buf, int len) {
 }
 
 void board_led_write(bool state) {
-  GPIO_PinState pin_state = (GPIO_PinState) (state ? LED_STATE_ON : (1 - LED_STATE_ON));
-  HAL_GPIO_WritePin(LED_PORT, LED_PIN, pin_state);
+	if (state)
+		LED_PORT->BSRR = LED_PIN;
+	else
+		LED_PORT->BRR = LED_PIN;
 }
 
 uint32_t board_button_read(void) {
-	int val = HAL_GPIO_ReadPin(BUTTON_PORT, BUTTON_PIN);
-  return val;
+	return (BUTTON_PORT->IDR & BUTTON_PIN) != 0;
 }
 
 volatile uint32_t system_ticks = 0;
@@ -170,68 +169,232 @@ static inline void SystemClock_Config(void) {
 
 }
 
-void board_init(void) {
-  HAL_Init();
-  SystemClock_Config();
-  SystemCoreClockUpdate();
+void board_init(void)
+{
+	HAL_Init();
+	SystemClock_Config();
+	SystemCoreClockUpdate();
 
-  // 1ms tick timer
-  SysTick_Config(SystemCoreClock / 1000);
+	// 1ms tick timer
+	SysTick_Config(SystemCoreClock / 1000);
 
-  GPIO_InitTypeDef GPIO_InitStruct;
+	// Alternate Function from tables in data sheets
+	// 0 is both the unused value and an active value for some pins
+	GPIOA->AFR[0] =
+		( 0 <<  0) |  // PA0     ADC0
+		( 0 <<  4) |  // PA1     ADC1
+		( 0 <<  8) |  // PA2     ADC2
+		(13 << 12) |  // PA3     ADC3           USART3_TX
+		(13 << 16) |  // PA4     DAC1           USART3_RX
+		( 0 << 20) |  // PA5     DAC2           LED
+		( 0 << 24) |  // PA6     QSPI
+		( 0 << 28);   // PA7     QSPI
+	GPIOA->AFR[1] =
+		( 0 <<  0) |  // PA8     VideoTE
+		( 0 <<  4) |  // PA9     LED1
+		( 0 <<  8) |  // PA10    LED2
+		(10 << 12) |  // PA11    USB            USB
+		(10 << 16) |  // PA12    USB            USB
+		( 0 << 20) |  // PA13    Debug
+		( 0 << 24) |  // PA14    Debug
+		( 0 << 28);   // PA15    SD_NSS
 
-  // LED
-  GPIO_InitStruct.Pin = LED_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(LED_PORT, &GPIO_InitStruct);
+	GPIOB->AFR[0] =
+		( 0 <<  0) |  // PB0     QSPI
+		( 0 <<  4) |  // PB1     QSPI
+		( 0 <<  8) |  // PB2     QSPI
+		( 0 << 12) |  // PB3     SD_SCK
+		( 0 << 16) |  // PB4     SD_MISO
+		( 0 << 20) |  // PB5     SD_MOSI
+		( 0 << 24) |  // PB6     SD_Detect
+		( 0 << 28);   // PB7     Button3
+	GPIOB->AFR[1] =
+		( 0 <<  0) |  // PB8     Button4
+		( 0 <<  4) |  // (Unused)
+		( 0 <<  8) |  // PB10    QSPI
+		( 0 << 12) |  // (Unused)
+		( 0 << 16) |  // PB12    VideoNSS
+		( 0 << 20) |  // PB13    VideoSCK
+		( 0 << 24) |  // PB14    VideoCMD
+		( 0 << 28);   // PB15    VideoMOSI
 
-  board_led_write(false);
+	GPIOC->AFR[0] = 0;
+	GPIOC->AFR[1] = 0;
+	GPIOD->AFR[0] = 0;
+	GPIOD->AFR[1] = 0;
+	GPIOH->AFR[0] = 0;
+	GPIOH->AFR[1] = 0;
 
-  // Button
-  GPIO_InitStruct.Pin = BUTTON_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = BUTTON_STATE_ACTIVE ? GPIO_PULLDOWN : GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(BUTTON_PORT, &GPIO_InitStruct);
+	// All outputs are push/pull not open-drain
+	GPIOA->OTYPER = 0;
+	GPIOB->OTYPER = 0;
+	GPIOC->OTYPER = 0;
+	GPIOD->OTYPER = 0;
+	GPIOH->OTYPER = 0;
 
-  // UART
-  UART_CLK_EN();
-  GPIO_InitStruct.Pin = UART_TX_PIN | UART_RX_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = UART_GPIO_AF;
-  HAL_GPIO_Init(UART_GPIO_PORT, &GPIO_InitStruct);
+	// Speed 0 slowest to 3 fastest
+	GPIOA->OSPEEDR =
+		(0 <<  0) | // PA0     ADC0
+		(0 <<  2) | // PA1     ADC1
+		(0 <<  4) | // PA2     ADC2
+		(2 <<  6) | // PA3     ADC3           USART3_TX
+		(2 <<  8) | // PA4     DAC1           USART3_RX
+		(0 << 10) | // PA5     DAC2           LED
+		(0 << 12) | // PA6     QSPI
+		(0 << 14) | // PA7     QSPI
+		(0 << 16) | // PA8     VideoTE
+		(0 << 18) | // PA9     LED1
+		(0 << 20) | // PA10    LED2
+		(2 << 22) | // PA11    USB            USB
+		(2 << 24) | // PA12    USB            USB
+		(0 << 26) | // PA13    Debug
+		(0 << 28) | // PA14    Debug
+		(0 << 30);  // PA15    SD_NSS
+	GPIOB->OSPEEDR =
+		(0 << 0 ) | // PB0     QSPI
+		(0 << 2 ) | // PB1     QSPI
+		(0 << 4 ) | // PB2     QSPI
+		(0 << 6 ) | // PB3     SD_SCK
+		(0 << 8 ) | // PB4     SD_MISO
+		(0 << 10) | // PB5     SD_MOSI
+		(0 << 12) | // PB6     SD_Detect
+		(0 << 14) | // PB7     Button3
+		(0 << 16) | // PB8     Button4
+		(0 << 18) | // (Unused)
+		(0 << 20) | // PB10    QSPI
+		(0 << 22) | // (Unused)
+		(0 << 24) | // PB12    VideoNSS
+		(0 << 26) | // PB13    VideoSCK
+		(0 << 28) | // PB14    VideoCMD
+		(0 << 30);  // PB15    VideoMOSI
+	GPIOC->OSPEEDR = 0;
+	GPIOD->OSPEEDR = 0;
+	GPIOH->OSPEEDR = 0;
 
-  UartHandle = (UART_HandleTypeDef) {
-      .Instance        = UART_DEV,
-      .Init.BaudRate   = CFG_BOARD_UART_BAUDRATE,
-      .Init.WordLength = UART_WORDLENGTH_8B,
-      .Init.StopBits   = UART_STOPBITS_1,
-      .Init.Parity     = UART_PARITY_NONE,
-      .Init.HwFlowCtl  = UART_HWCONTROL_NONE,
-      .Init.Mode       = UART_MODE_TX_RX,
-      .Init.OverSampling = UART_OVERSAMPLING_16,
-      .AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT
-  };
-  HAL_UART_Init(&UartHandle);
+	// Options
+	// 0 -no pull
+	// 1 -pull up
+	// 2 -pull down
+	// 3 -reserved
+	GPIOA->PUPDR =
+		(0 <<  0) | // PA0     ADC0
+		(0 <<  2) | // PA1     ADC1
+		(0 <<  4) | // PA2     ADC2
+		(0 <<  6) | // PA3     ADC3           USART3_TX
+		(0 <<  8) | // PA4     DAC1           USART3_RX
+		(0 << 10) | // PA5     DAC2           LED
+		(0 << 12) | // PA6     QSPI
+		(0 << 14) | // PA7     QSPI
+		(0 << 16) | // PA8     VideoTE
+		(0 << 18) | // PA9     LED1
+		(0 << 20) | // PA10    LED2
+		(0 << 22) | // PA11    USB            USB
+		(0 << 24) | // PA12    USB            USB
+		(0 << 26) | // PA13    Debug
+		(0 << 28) | // PA14    Debug
+		(0 << 30);  // PA15    SD_NSS
+	GPIOB->PUPDR =
+		(0 << 0 ) | // PB0     QSPI
+		(0 << 2 ) | // PB1     QSPI
+		(0 << 4 ) | // PB2     QSPI
+		(0 << 6 ) | // PB3     SD_SCK
+		(0 << 8 ) | // PB4     SD_MISO
+		(0 << 10) | // PB5     SD_MOSI
+		(0 << 12) | // PB6     SD_Detect
+		(0 << 14) | // PB7     Button3
+		(0 << 16) | // PB8     Button4
+		(0 << 18) | // (Unused)
+		(0 << 20) | // PB10    QSPI
+		(0 << 22) | // (Unused)
+		(0 << 24) | // PB12    VideoNSS
+		(0 << 26) | // PB13    VideoSCK
+		(0 << 28) | // PB14    VideoCMD
+		(0 << 30);  // PB15    VideoMOSI
+	GPIOC->PUPDR =
+		(2 << 26) | // PC13    Button1        Button
+		(0 << 28) | // PC14    OSC32_IN       OSC32_IN
+		(0 << 30);  // PC15    OSC32_OUT      OSC32_OUT
 
-  // USB
-  __HAL_RCC_USB_CLK_ENABLE();
-  // Configure USB DM and DP pins. This is optional, and maintained only for user guidance.
-  GPIO_InitStruct.Pin = (GPIO_PIN_11 | GPIO_PIN_12);
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	GPIOD->PUPDR = 0;
+	GPIOH->PUPDR =
+		(0 << 0) | // PH0     OSC_IN         OSC_IN
+		(0 << 2);  // PH1     Button2        OSC_OUT
 
+	GPIOA->ODR = 0;
+	GPIOB->ODR = 0;
+	GPIOC->ODR = 0;
+	GPIOD->ODR = 0;
+	GPIOH->ODR = 0;
 
-  /* Enable VDDUSB */
-  #if defined (PWR_USBSCR_USB33DEN)
-  HAL_PWREx_EnableVddUSB();
-  #endif
+	// Modes
+	// 0 -Input
+	// 1 -Output
+	// 2 -Alternate Function
+	// 3 -Analog Function or disabled
+	GPIOA->MODER =
+		(3 <<  0) | // PA0     ADC0
+		(3 <<  2) | // PA1     ADC1
+		(3 <<  4) | // PA2     ADC2
+		(2 <<  6) | // PA3     ADC3           USART3_TX
+		(2 <<  8) | // PA4     DAC1           USART3_RX
+		(1 << 10) | // PA5     DAC2           LED
+		(3 << 12) | // PA6     QSPI
+		(3 << 14) | // PA7     QSPI
+		(3 << 16) | // PA8     VideoTE
+		(3 << 18) | // PA9     LED1
+		(3 << 20) | // PA10    LED2
+		(2 << 22) | // PA11    USB            USB
+		(2 << 24) | // PA12    USB            USB
+		(2 << 26) | // PA13    Debug
+		(2 << 28) | // PA14    Debug
+		(2 << 30);  // PA15    SD_NSS
+	GPIOB->MODER =
+		(3 << 0 ) | // PB0     QSPI
+		(3 << 2 ) | // PB1     QSPI
+		(3 << 4 ) | // PB2     QSPI
+		(2 << 6 ) | // PB3     SD_SCK
+		(2 << 8 ) | // PB4     SD_MISO
+		(3 << 10) | // PB5     SD_MOSI
+		(3 << 12) | // PB6     SD_Detect
+		(3 << 14) | // PB7     Button3
+		(3 << 16) | // PB8     Button4
+		(0 << 18) | // (Unused)
+		(3 << 20) | // PB10    QSPI
+		(0 << 22) | // (Unused)
+		(3 << 24) | // PB12    VideoNSS
+		(3 << 26) | // PB13    VideoSCK
+		(3 << 28) | // PB14    VideoCMD
+		(3 << 30);  // PB15    VideoMOSI
+	GPIOC->MODER = 0x03FFFFFF |
+		(0 << 26) | // PC13    Button1        Button
+		(3 << 28) | // PC14    OSC32_IN       OSC32_IN
+		(3 << 30);  // PC15    OSC32_OUT      OSC32_OUT
+	GPIOD->MODER = 0x00000030;
+	GPIOH->MODER =
+		(3 << 0) | // PH0     OSC_IN         OSC_IN
+		(3 << 2);  // PH1     Button2        OSC_OUT
+
+	UART_CLK_EN();
+	UartHandle = (UART_HandleTypeDef) {
+	  .Instance        = UART_DEV,
+	  .Init.BaudRate   = CFG_BOARD_UART_BAUDRATE,
+	  .Init.WordLength = UART_WORDLENGTH_8B,
+	  .Init.StopBits   = UART_STOPBITS_1,
+	  .Init.Parity     = UART_PARITY_NONE,
+	  .Init.HwFlowCtl  = UART_HWCONTROL_NONE,
+	  .Init.Mode       = UART_MODE_TX_RX,
+	  .Init.OverSampling = UART_OVERSAMPLING_16,
+	  .AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT
+	};
+	HAL_UART_Init(&UartHandle);
+
+	// USB
+	__HAL_RCC_USB_CLK_ENABLE();
+
+	/* Enable VDDUSB */
+#if defined (PWR_USBSCR_USB33DEN)
+	HAL_PWREx_EnableVddUSB();
+#endif
 }
 
 int main(void)
