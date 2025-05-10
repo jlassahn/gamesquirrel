@@ -96,48 +96,61 @@ void hw_init(void)
   UsbInit();
 }
 
-static inline void SystemClock_Config(void) {
-	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-
+static inline void SystemClock_Config(void)
+{
 	// set highest voltage on regulator before setting clocks to high speed
 	PWR->VOSCR = 0x30; //SCALE0, highest voltage
 	while ((PWR->VOSSR & PWR_VOSSR_VOSRDY) == 0)
 	{}
 
-	/** Initializes the RCC Oscillators according to the specified parameters
-	* in the RCC_OscInitTypeDef structure.
-	*/
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
-	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-	RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
-	RCC_OscInitStruct.PLL.PLLM = 12;
-	RCC_OscInitStruct.PLL.PLLN = 250;
-	RCC_OscInitStruct.PLL.PLLP = 2;
-	RCC_OscInitStruct.PLL.PLLQ = 2;
-	RCC_OscInitStruct.PLL.PLLR = 2;
-	RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
-	RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
-	RCC_OscInitStruct.PLL.PLLFRACN = 0;
-	HAL_RCC_OscConfig(&RCC_OscInitStruct);
+	// Set up PLL1
+	RCC->PLL1CFGR =
+		0x00070000 | // enable P Q and R outputs
+		0x00000C00 | // M value
+		0x00000010 | // VCO range 2 -4 MHz
+		0x00000003;  // Source is HSE
 
-	/** Initializes the CPU, AHB and APB buses clocks
-	*/
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-	                             |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
-	                             |RCC_CLOCKTYPE_PCLK3;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-	RCC_ClkInitStruct.APB3CLKDivider = RCC_HCLK_DIV1;
-	HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+	RCC->PLL1DIVR =
+		(250 << 0) | // N
+		(2 << 9) | // P
+		(2 << 16) | // Q
+		(2 << 24); // R
 
+	RCC->CR =
+		RCC_CR_HSION |
+		// RCC_CR_HSIKERON
+		RCC_CR_HSIDIV_0 |  // HSI divide by 2 (32 MHz)
+		// RCC_CR_HSIDIVF
+		// RCC_CR_CSION
+		// RCC_CR_CSIKERON
+		RCC_CR_HSI48ON |  // FIXME currently used by USB, replace with PLL
+		RCC_CR_HSEON |
+		// RCC_CR_HSEBYP // FIXME actual PCB runs in bypass mode
+		// RCC_CR_HSEEXT // FIXME actual PCB ext should be set
+		RCC_CR_PLL1ON;
+		// RCC_CR_PLL2ON // FIXME actual PCB has more PLLs
+
+	uint32_t rcc_cr_mask =
+		RCC_CR_HSIRDY |
+		// RCC_CR_CSIRDY
+		RCC_CR_HSI48RDY |
+		RCC_CR_HSERDY |
+		RCC_CR_PLL1RDY;
+		// RCC_CR_PLL2RDY
+
+	while ((RCC->CR & rcc_cr_mask) != rcc_cr_mask)
+	{}
+
+	// set flash latency before switching CPU clocks
+	FLASH->ACR =  0x125; // prefetch enabled, 2 programming delay, 5 wait states
+	(void)FLASH->ACR; // readback to confirm write completed
+
+	RCC->CFGR1 = 0x0003; // System clock is PLL1
+	RCC->CFGR2 = 0; // All AHB and APB clocks are at System/1
+	(void)RCC->CFGR1; // readback to force sync
+	(void)RCC->CFGR2; // readback to force sync
 
 	/* Peripheral clock enable */
-
 	// RCC->AHB1ENR = 0x90000100;
 
 	RCC->AHB2ENR =
@@ -189,6 +202,8 @@ void board_init(void)
 
 	// 1ms tick timer
 	SysTick_Config(SystemCoreClock / 1000);
+
+	// FIXME is ICACHE enabled?
 
 	// Alternate Function from tables in data sheets
 	// 0 is both the unused value and an active value for some pins
