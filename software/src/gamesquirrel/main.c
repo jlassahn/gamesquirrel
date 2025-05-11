@@ -1,6 +1,9 @@
 
-#include "stm32h503xx.h"
-#include "stm32h5xx_hal.h"
+#define DEMO_BOARD 0
+#define ENABLE_UART 0
+// #define HSE_VALUE    (16000000UL) // Currently defined in tools/compile_settings.mk
+
+#include "stm32h523xx.h"
 #include "gamesquirrel/usb.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -8,17 +11,13 @@
 
 static const uint32_t blink_interval_ms = 250;
 
-// LED
+// LED on GPIOA Pin5, Pin9, and Pin10
 #define LED_PORT              GPIOA
-#define LED_PIN               GPIO_PIN_5
+#define LED_PIN               0x0620
 
-// Button
+// Button on GPIOC Pin13
 #define BUTTON_PORT           GPIOC
-#define BUTTON_PIN            GPIO_PIN_13
-
-// UART
-#define UART_DEV              USART3
-#define CFG_BOARD_UART_BAUDRATE 115200   ///< Default baud rate
+#define BUTTON_PIN            0x2000
 
 void board_led_write(bool state);
 uint32_t board_button_read(void);
@@ -28,19 +27,6 @@ uint32_t board_millis(void);
 
 void hw_init(void);
 void board_init(void);
-
-UART_HandleTypeDef UartHandle;
-
-int board_uart_read(uint8_t* buf, int len) {
-  (void) buf;
-  (void) len;
-  return 0;
-}
-
-int board_uart_write(void const* buf, int len) {
-  HAL_UART_Transmit(&UartHandle, (uint8_t*) (uintptr_t) buf, len, 0xffff);
-  return len;
-}
 
 void board_led_write(bool state) {
 	if (state)
@@ -57,7 +43,6 @@ volatile uint32_t system_ticks = 0;
 
 void SysTick_Handler(void) {
   system_ticks++;
-  HAL_IncTick();
 }
 
 uint32_t board_millis(void) {
@@ -74,14 +59,14 @@ int _read(int fhdl, char *buf, size_t count) __attribute__ ((used));
 
 // Default logging with on-board UART
 int _write (int fhdl, const char *buf, size_t count) {
-  (void) fhdl;
-  return board_uart_write(buf, (int) count);
+	(void) fhdl;
+	return UsbSend(buf, count);
 }
 
 int _read (int fhdl, char *buf, size_t count) {
-  (void) fhdl;
-  int rd = board_uart_read((uint8_t*) buf, (int) count);
-  return (rd > 0) ? rd : -1;
+	(void) fhdl;
+	int rd = UsbReceive(buf, count);
+	return (rd > 0) ? rd : -1;
 }
 
 // Required by __libc_init_array in startup code if we are compiling using
@@ -106,12 +91,16 @@ static inline void SystemClock_Config(void)
 	// Set up PLL1
 	RCC->PLL1CFGR =
 		0x00070000 | // enable P Q and R outputs
-		0x00000C00 | // M value
+#if DEMO_BOARD
+		(12 << 8)  | // M value (24MHz clock / 12 == 2 MHz)
+#else
+		( 8 << 8)  | // M value (16MHz clock / 8 == 2 MHz)
+#endif
 		0x00000010 | // VCO range 2 -4 MHz
 		0x00000003;  // Source is HSE
 
 	RCC->PLL1DIVR =
-		(250 << 0) | // N
+		(250 << 0) | // N  FIXME set to 240 eventually
 		(2 << 9) | // P
 		(2 << 16) | // Q
 		(2 << 24); // R
@@ -125,8 +114,13 @@ static inline void SystemClock_Config(void)
 		// RCC_CR_CSIKERON
 		RCC_CR_HSI48ON |  // FIXME currently used by USB, replace with PLL
 		RCC_CR_HSEON |
+#if DEMO_BOARD
 		// RCC_CR_HSEBYP // FIXME actual PCB runs in bypass mode
 		// RCC_CR_HSEEXT // FIXME actual PCB ext should be set
+#else
+		RCC_CR_HSEBYP | // FIXME actual PCB runs in bypass mode
+		RCC_CR_HSEEXT | // FIXME actual PCB ext should be set
+#endif
 		RCC_CR_PLL1ON;
 		// RCC_CR_PLL2ON // FIXME actual PCB has more PLLs
 
@@ -196,9 +190,9 @@ static inline void SystemClock_Config(void)
 
 void board_init(void)
 {
-	HAL_Init();
+	// FIXME set up SysTick interrupt (seems to be getting done somehow already...)
 	SystemClock_Config();
-	SystemCoreClockUpdate();
+	SystemCoreClockUpdate(); // relies on HSE_VALUE
 
 	// 1ms tick timer
 	SysTick_Config(SystemCoreClock / 1000);
@@ -211,8 +205,8 @@ void board_init(void)
 		( 0 <<  0) |  // PA0     ADC0
 		( 0 <<  4) |  // PA1     ADC1
 		( 0 <<  8) |  // PA2     ADC2
-		(13 << 12) |  // PA3     ADC3           USART3_TX
-		(13 << 16) |  // PA4     DAC1           USART3_RX
+		( 0 << 12) |  // PA3     ADC3           USART3_TX
+		( 0 << 16) |  // PA4     DAC1           USART3_RX
 		( 0 << 20) |  // PA5     DAC2           LED
 		( 0 << 24) |  // PA6     QSPI
 		( 0 << 28);   // PA7     QSPI
@@ -264,8 +258,8 @@ void board_init(void)
 		(0 <<  0) | // PA0     ADC0
 		(0 <<  2) | // PA1     ADC1
 		(0 <<  4) | // PA2     ADC2
-		(2 <<  6) | // PA3     ADC3           USART3_TX
-		(2 <<  8) | // PA4     DAC1           USART3_RX
+		(0 <<  6) | // PA3     ADC3           USART3_TX
+		(0 <<  8) | // PA4     DAC1           USART3_RX
 		(0 << 10) | // PA5     DAC2           LED
 		(0 << 12) | // PA6     QSPI
 		(0 << 14) | // PA7     QSPI
@@ -347,6 +341,7 @@ void board_init(void)
 		(0 << 0) | // PH0     OSC_IN         OSC_IN
 		(0 << 2);  // PH1     Button2        OSC_OUT
 
+	// initial output data
 	GPIOA->ODR = 0;
 	GPIOB->ODR = 0;
 	GPIOC->ODR = 0;
@@ -362,14 +357,14 @@ void board_init(void)
 		(3 <<  0) | // PA0     ADC0
 		(3 <<  2) | // PA1     ADC1
 		(3 <<  4) | // PA2     ADC2
-		(2 <<  6) | // PA3     ADC3           USART3_TX
-		(2 <<  8) | // PA4     DAC1           USART3_RX
+		(3 <<  6) | // PA3     ADC3           USART3_TX
+		(3 <<  8) | // PA4     DAC1           USART3_RX
 		(1 << 10) | // PA5     DAC2           LED
 		(3 << 12) | // PA6     QSPI
 		(3 << 14) | // PA7     QSPI
 		(3 << 16) | // PA8     VideoTE
-		(3 << 18) | // PA9     LED1
-		(3 << 20) | // PA10    LED2
+		(1 << 18) | // PA9     LED1
+		(1 << 20) | // PA10    LED2
 		(2 << 22) | // PA11    USB            USB
 		(2 << 24) | // PA12    USB            USB
 		(2 << 26) | // PA13    Debug
@@ -401,24 +396,9 @@ void board_init(void)
 		(3 << 0) | // PH0     OSC_IN         OSC_IN
 		(3 << 2);  // PH1     Button2        OSC_OUT
 
-	UartHandle = (UART_HandleTypeDef) {
-	  .Instance        = UART_DEV,
-	  .Init.BaudRate   = CFG_BOARD_UART_BAUDRATE,
-	  .Init.WordLength = UART_WORDLENGTH_8B,
-	  .Init.StopBits   = UART_STOPBITS_1,
-	  .Init.Parity     = UART_PARITY_NONE,
-	  .Init.HwFlowCtl  = UART_HWCONTROL_NONE,
-	  .Init.Mode       = UART_MODE_TX_RX,
-	  .Init.OverSampling = UART_OVERSAMPLING_16,
-	  .AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT
-	};
-	HAL_UART_Init(&UartHandle);
-
 	// USB
 	/* Enable VDDUSB */
-#if defined (PWR_USBSCR_USB33DEN)
-	HAL_PWREx_EnableVddUSB();
-#endif
+	PWR->USBSCR = PWR_USBSCR_USB33SV;
 }
 
 int main(void)
@@ -426,12 +406,13 @@ int main(void)
 	hw_init();
 	UsbStart();
 
+	/*
 	while (!board_button_read())
 	{
 	}
+	*/
 
 	printf("Hello, world\r\n");
-	UsbSend("Hello USB\r\n", 11);
 
 	bool led_state = false;
 	uint32_t last_ms = board_millis();
@@ -444,7 +425,6 @@ int main(void)
 			for (int i=0; i<length; i++)
 				buff[i] = buff[i] ^ 0x20;
 			UsbSend(buff, length);
-			printf("buff %s\r\n", buff);
 		}
 
 		uint32_t ms = board_millis();
@@ -455,8 +435,8 @@ int main(void)
 		board_led_write(led_state);
 		led_state = 1 - led_state; // toggle
 
-		//printf("interrupts  %d\r\n", UsbInterruptCount());
-		printf("CRS CR =  %.8lX CFGR = %.8lX\r\n", CRS->CR, CRS->CFGR);
+		// FIXME there's something wrong with the SystemCoreClock value, but SysTick is running at the right speed.
+		printf("Tick %lu  %lu\r\n", ms, SystemCoreClock);
 	}
 }
 
