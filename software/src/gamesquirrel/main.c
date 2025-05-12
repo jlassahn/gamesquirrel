@@ -1,7 +1,5 @@
 
 #define DEMO_BOARD 0
-#define ENABLE_UART 0
-// #define HSE_VALUE    (16000000UL) // Currently defined in tools/compile_settings.mk
 
 #include "stm32h523xx.h"
 #include "gamesquirrel/usb.h"
@@ -81,7 +79,7 @@ void hw_init(void)
   UsbInit();
 }
 
-static inline void SystemClock_Config(void)
+static inline void ClockInit(void)
 {
 	// set highest voltage on regulator before setting clocks to high speed
 	PWR->VOSCR = 0x30; //SCALE0, highest voltage
@@ -100,10 +98,10 @@ static inline void SystemClock_Config(void)
 		0x00000003;  // Source is HSE
 
 	RCC->PLL1DIVR =
-		(250 << 0) | // N  FIXME set to 240 eventually
-		(2 << 9) | // P
-		(2 << 16) | // Q
-		(2 << 24); // R
+		((250 - 1) << 0) | // N  FIXME set to 240 eventually
+		((2 - 1) << 9) | // P
+		((2 - 1) << 16) | // Q
+		((2 - 1) << 24); // R
 
 	RCC->CR =
 		RCC_CR_HSION |
@@ -190,11 +188,13 @@ static inline void SystemClock_Config(void)
 
 void board_init(void)
 {
-	// FIXME set up SysTick interrupt (seems to be getting done somehow already...)
-	SystemClock_Config();
-	SystemCoreClockUpdate(); // relies on HSE_VALUE
+	ClockInit();
 
-	// 1ms tick timer
+	// This just sets the SystemCoreClock variable,
+	// relies on HSE_VALUE being defined
+	SystemCoreClockUpdate();
+
+	// 1ms tick timer, in CMSIS, sets up SysTick counter and enables interrupt.
 	SysTick_Config(SystemCoreClock / 1000);
 
 	// FIXME is ICACHE enabled?
@@ -435,7 +435,6 @@ int main(void)
 		board_led_write(led_state);
 		led_state = 1 - led_state; // toggle
 
-		// FIXME there's something wrong with the SystemCoreClock value, but SysTick is running at the right speed.
 		printf("Tick %lu  %lu\r\n", ms, SystemCoreClock);
 	}
 }
