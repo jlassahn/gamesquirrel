@@ -12,6 +12,29 @@ Jeff Lassahn
 
 TODO This is a book describing the details of the GameSquirrel system software.
 
+== Introduction
+
+The GameSquirrel is awesome.  Here's how it works.
+
+=== References
+
+Other documents useful for reference:
+
+For the Arm Cortex M33 CPU,
+	Arm Cortex-M33 Devices Generic User Guide (from Arm)
+	Arm Cortex-M33 Processor Technical Reference Manual (from Arm)
+	Reference Manual for STM32H523/33xx (ST RM0481)
+
+For the display
+	Sitronix ST7789V Datasheet
+
+For the serial RAM...
+
+SD card spec?
+USB spec?
+FAT filesystem spec?
+
+
 == Memory Organization
 
 The GameSquirrel has three kinds of system memory:
@@ -29,10 +52,116 @@ The maximum speed of the main memory is about 48 Megabytes per second, which
 is much slower than the 240MHz main processor.
 
 
-Memory map
+== Memory map
 
 0x9000_0000 ... 0x903F_FFFF Slow memory data image
 0x2000_0000 ... 0x2004_3FFF Fast SRAM
 0x0800_0000 ... 0x0807_FFFF Flash ROM
 0x0400_0000 ... 0x043F_FFFF Slow memory code image
 
+Slow Memory Typical Organization
+.text
+.data
+.bss
+heap
+0x3F_C000 ... 0x3F_FFFF 16K Reserved for system services
+
+Fast Memory Typical Organization
+stack
+heap
+0x2004_3000 ... 0x2004_3FFF 4K Reserved for system services
+
+FLASH Memory Organization
+0x0800_0000 Interrupt Vectors (can be moved by the app if REALLY careful)
+0x0800_0400 SystemLib v1 Library table
+remaining is 512K system code and data
+
+== Interfaces to Peripherals
+
+=== Display
+
+Uses ST7789V controller
+On SPI2
+
+
+=== Slow Memory
+
+On OCTOSPI in Quad mode.
+
+=== SD Cards
+
+On SPI1
+
+=== Audio
+
+On DAC1 Channel 1 and 2, 48KHz
+Use DMA to send blocks, witn interrupt.
+
+=== Joystick
+On ADC1 Input 0 and 1
+
+=== Buttons
+
+=== Indicator LEDs
+
+=== USB
+
+=== Battery Voltage
+
+== Configuration of the Microcontroller
+
+=== Clocks
+
+LSE is 32768Hz crystal for realtime clock on OSC32
+
+HSE is 16MHz oscillator
+HSE drives PLLs
+	PLL1/VCO 500MHz
+	PLL1/P   CPU 250MHz
+	PLL1/Q   SPI2 62.5MHz
+	PLL1/R
+
+	PLL2/VCO 200MHz
+	PLL2/P   SPI1 25MHz
+	PLL2/Q
+	PLL2/R   OCTOSPI 100MHz
+
+	PLL3/VCO 192MHz
+	PLL3/P
+	PLL3/Q   USB 48MHz
+	PLL3/R   DAC timer LPTIM2 48MHz
+
+FIXME HSI48 can be used for USB, probably use PLL instead
+
+
+=== Interrupts
+
+=== Memory
+
+=== DMA
+
+DMA channel for Audio
+DMA channel for video buffer copies
+
+=== Timers
+
+Audio timing uses LPTIM2 timer clocked from PLL3/R at 192MHz
+One of TIM2,5 is used as a 32 bit free-running 1MHz clock.
+TIM1_CH2 and TIM1_CH3 control Indicator LEDs.
+LPTIMx can be used to measure PLL2/P or PLL3/R
+
+
+=== Analog Inputs
+
+ADC1
+	input 0, Joystick X
+	input 1, Joystick Y
+	input 14, Unused pin PA2
+	input 15, Unused pin PA3
+	input 17, Vrefint  1.216v
+ADC2
+	input 0, Joystick X
+	input 1, Joystick Y
+	input 14, Unused pin PA2
+	input 15, Unused pin PA3
+	input 16, Vbat

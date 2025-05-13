@@ -2,6 +2,7 @@
 GS_SRCS := \
 external/STM32H5xx/Source/Templates/gcc/startup_stm32h523xx.s \
 external/STM32H5xx/Source/Templates/system_stm32h5xx.c \
+src/gamesquirrel/core.c \
 src/gamesquirrel/usb.c \
 src/gamesquirrel/main.c
 
