@@ -146,9 +146,9 @@ DMA channel for video buffer copies
 === Timers
 
 Audio timing uses LPTIM2 timer clocked from PLL3/R at 192MHz
-One of TIM2,5 is used as a 32 bit free-running 1MHz clock.
+TIM2 is used as a 32 bit free-running 1MHz clock.
 TIM1_CH2 and TIM1_CH3 control Indicator LEDs.
-LPTIMx can be used to measure PLL2/P or PLL3/R
+LPTIM1 can be used to measure PLL2/P or PLL3/R
 
 
 === Analog Inputs

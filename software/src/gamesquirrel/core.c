@@ -52,12 +52,7 @@ static void ClockInit(void)
 
 	RCC->CR =
 		RCC_CR_HSION |
-		// RCC_CR_HSIKERON
 		RCC_CR_HSIDIV_0 |  // HSI divide by 2 (32 MHz)
-		// RCC_CR_HSIDIVF
-		// RCC_CR_CSION
-		// RCC_CR_CSIKERON
-		// RCC_CR_HSI48ON |
 		RCC_CR_HSEON |
 		RCC_CR_HSEBYP |
 		RCC_CR_HSEEXT |
@@ -67,8 +62,6 @@ static void ClockInit(void)
 
 	uint32_t rcc_cr_mask =
 		RCC_CR_HSIRDY |
-		// RCC_CR_CSIRDY
-		// RCC_CR_HSI48RDY |
 		RCC_CR_HSERDY |
 		RCC_CR_PLL1RDY |
 		RCC_CR_PLL2RDY |
@@ -87,7 +80,16 @@ static void ClockInit(void)
 	(void)RCC->CFGR2; // readback to force sync
 
 	/* Peripheral clock enable */
-	// RCC->AHB1ENR = 0xD0000100; // FIXME enable DMA and maybe other stuff
+	RCC->AHB1ENR =
+		RCC_AHB1ENR_GPDMA1EN |
+		RCC_AHB1ENR_GPDMA2EN |
+		RCC_AHB1ENR_FLITFEN |
+		// RCC_AHB1ENR_CRCEN
+		// RCC_AHB1ENR_RAMCFGEN
+		// RCC_AHB1ENR_TZSC1EN
+		RCC_AHB1ENR_BKPRAMEN |
+		RCC_AHB1ENR_DCACHE1EN |
+		RCC_AHB1ENR_SRAM1EN;
 
 	RCC->AHB2ENR =
 		RCC_AHB2ENR_SRAM3EN |
@@ -101,24 +103,39 @@ static void ClockInit(void)
 		RCC_AHB2ENR_GPIODEN |
 		RCC_AHB2ENR_GPIOHEN;
 
-	RCC->AHB4ENR; // FIXME enable stuff
+	RCC->AHB4ENR =
+		RCC_AHB4ENR_OCTOSPI1EN;
 
-	// FIXME check and enable peripheral clocks below
 	RCC->APB1LENR =
-		RCC_APB1LENR_CRSEN |
-		RCC_APB1LENR_USART3EN;
+		RCC_APB1LENR_SPI2EN |
+		RCC_APB1LENR_TIM2EN;
 
-	RCC->APB1HENR = 0;
+	RCC->APB1HENR =
+		RCC_APB1HENR_LPTIM2EN;
 
 	RCC->APB2ENR =
+		RCC_APB2ENR_TIM1EN |
+		RCC_APB2ENR_SPI1EN |
 		RCC_APB2ENR_USBEN;
 
-	RCC->APB3ENR; // FIXME
+	RCC->APB3ENR =
+		RCC_APB3ENR_LPTIM1EN |
+		RCC_APB3ENR_RTCAPBEN;
 
+	RCC->CCIPR1;
+	RCC->CCIPR2 =
+		(0 << 8) | // LPTIM1SEL rcc_pclk3
+		(2 << 12); // LPTIM2SEL pll3_r
+	RCC->CCIPR3 =
+		(1 << 0) | // SPI1SEL pll2_p
+		(0 << 3);  // SPI2SEL pll1_q
 	RCC->CCIPR4 =
 		(2 << 0) | // OCTOSPI == pll2_r
 		(0 << 2) | // SYSTICKSEL == rcc_hclk/8
 		(2 << 4);  // USBSEL == pll3_q
+	RCC->CCIPR5 =
+		(0 << 0) | // ADCDACSEL rcc_hclk
+		(1 << 4);  // RNGSEL pll1_q
 }
 
 static void GPIOInit(void)
@@ -322,6 +339,19 @@ static void GPIOInit(void)
 
 }
 
+static void TimerInit(void)
+{
+	// TIM2 is used as a 32 bit free-running 1MHz clock.
+	TIM2->PSC = 250; //prescaler
+	TIM2->CNT = 0; // initial counter value
+	TIM2->EGR = 1; // trigger shadow register update
+	TIM2->CR1 = 0x0001; //enable timer
+
+	// Audio timing uses LPTIM2 timer clocked from PLL3/R at 192MHz
+	// TIM1_CH2 and TIM1_CH3 control Indicator LEDs.
+	// LPTIM1 can be used to measure PLL2/P or PLL3/R
+}
+
 void CoreInit(void)
 {
 	ClockInit();
@@ -336,6 +366,7 @@ void CoreInit(void)
 	// FIXME is ICACHE enabled?  DCACHE?
 
 	GPIOInit();
+	TimerInit();
 
 	// USB
 	/* Enable VDDUSB */
