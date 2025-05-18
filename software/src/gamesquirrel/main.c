@@ -1,49 +1,19 @@
 
-#include "stm32h523xx.h"
+// #include "stm32h523xx.h"
 #include "gamesquirrel/core.h"
 #include "gamesquirrel/usb.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-static const uint32_t blink_interval_ms = 250;
-
-// LED on GPIOA Pin5, Pin9, and Pin10
-#define LED_PORT              GPIOA
-#define LED_PIN               0x0620
-
-// Button on GPIOC Pin13
-#define BUTTON_PORT           GPIOC
-#define BUTTON_PIN            0x2000
-
-void board_led_write(bool state);
-uint32_t board_button_read(void);
-int board_uart_read(uint8_t *buf, int len);
-int board_uart_write(void const *buf, int len);
-uint32_t board_millis(void);
+static const uint32_t blink_interval_us = 250000;
 
 void hw_init(void);
-void board_init(void);
-
-void board_led_write(bool state) {
-	if (state)
-		LED_PORT->BSRR = LED_PIN;
-	else
-		LED_PORT->BRR = LED_PIN;
-}
-
-uint32_t board_button_read(void) {
-	return (BUTTON_PORT->IDR & BUTTON_PIN) != 0;
-}
 
 volatile uint32_t system_ticks = 0;
 
 void SysTick_Handler(void) {
   system_ticks++;
-}
-
-uint32_t board_millis(void) {
-  return system_ticks;
 }
 
 void HardFault_Handler(void) {
@@ -83,16 +53,9 @@ int main(void)
 	hw_init();
 	UsbStart();
 
-	/*
-	while (!board_button_read())
-	{
-	}
-	*/
-
 	printf("Hello, world\r\n");
 
-	bool led_state = false;
-	uint32_t last_ms = board_millis();
+	uint32_t last_us = TimeMicroseconds();
 	while (true)
 	{
 		static char buff[16];
@@ -104,15 +67,20 @@ int main(void)
 			UsbSend(buff, length);
 		}
 
-		uint32_t ms = board_millis();
-		if (ms - last_ms < blink_interval_ms)
+		uint32_t us = TimeMicroseconds();
+		if (us - last_us < blink_interval_us)
 			continue;
-		last_ms = ms;
+		last_us += blink_interval_us;
 
-		board_led_write(led_state);
-		led_state = 1 - led_state; // toggle
+		LEDWrite(0, (us / 1000) % 1000);
+		LEDWrite(1, (us / 5000) % 1000);
 
-		printf("Tick %lu  %ld\r\n", ms, TIM2->CNT);
+		printf("Tick %lu %d %d %d %d\r\n",
+				us,
+				ButtonRead(0),
+				ButtonRead(1),
+				ButtonRead(2),
+				ButtonRead(3));
 	}
 }
 

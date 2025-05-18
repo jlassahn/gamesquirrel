@@ -153,8 +153,8 @@ static void GPIOInit(void)
 		( 0 << 28);   // PA7     QSPI
 	GPIOA->AFR[1] =
 		( 0 <<  0) |  // PA8     VideoTE
-		( 0 <<  4) |  // PA9     LED1
-		( 0 <<  8) |  // PA10    LED2
+		( 1 <<  4) |  // PA9     LED1
+		( 1 <<  8) |  // PA10    LED2
 		(10 << 12) |  // PA11    USB            USB
 		(10 << 16) |  // PA12    USB            USB
 		( 0 << 20) |  // PA13    Debug
@@ -263,8 +263,8 @@ static void GPIOInit(void)
 		(0 << 8 ) | // PB4     SD_MISO
 		(0 << 10) | // PB5     SD_MOSI
 		(0 << 12) | // PB6     SD_Detect
-		(0 << 14) | // PB7     Button3
-		(0 << 16) | // PB8     Button4
+		(2 << 14) | // PB7     Button3
+		(2 << 16) | // PB8     Button4
 		(0 << 18) | // (Unused)
 		(0 << 20) | // PB10    QSPI
 		(0 << 22) | // (Unused)
@@ -280,7 +280,7 @@ static void GPIOInit(void)
 	GPIOD->PUPDR = 0;
 	GPIOH->PUPDR =
 		(0 << 0) | // PH0     OSC_IN         OSC_IN
-		(0 << 2);  // PH1     Button2        OSC_OUT
+		(2 << 2);  // PH1     Button2        OSC_OUT
 
 	// initial output data
 	GPIOA->ODR = 0;
@@ -304,8 +304,8 @@ static void GPIOInit(void)
 		(3 << 12) | // PA6     QSPI
 		(3 << 14) | // PA7     QSPI
 		(3 << 16) | // PA8     VideoTE
-		(1 << 18) | // PA9     LED1
-		(1 << 20) | // PA10    LED2
+		(2 << 18) | // PA9     LED1
+		(2 << 20) | // PA10    LED2
 		(2 << 22) | // PA11    USB            USB
 		(2 << 24) | // PA12    USB            USB
 		(2 << 26) | // PA13    Debug
@@ -319,8 +319,8 @@ static void GPIOInit(void)
 		(2 << 8 ) | // PB4     SD_MISO
 		(3 << 10) | // PB5     SD_MOSI
 		(3 << 12) | // PB6     SD_Detect
-		(3 << 14) | // PB7     Button3
-		(3 << 16) | // PB8     Button4
+		(0 << 14) | // PB7     Button3
+		(0 << 16) | // PB8     Button4
 		(0 << 18) | // (Unused)
 		(3 << 20) | // PB10    QSPI
 		(0 << 22) | // (Unused)
@@ -335,21 +335,49 @@ static void GPIOInit(void)
 	GPIOD->MODER = 0x00000030;
 	GPIOH->MODER =
 		(3 << 0) | // PH0     OSC_IN         OSC_IN
-		(3 << 2);  // PH1     Button2        OSC_OUT
+		(0 << 2);  // PH1     Button2        OSC_OUT
 
 }
 
 static void TimerInit(void)
 {
+	// TIM1 generates 1KHz PWM signals for indicator LEDs.
+	TIM1->PSC = 250;
+	TIM1->CCER = 0x0110;
+	TIM1->BDTR = 0x8C00;
+	TIM1->CNT = 0;
+	TIM1->ARR = 999;
+	// Channel 2 PWM mode1, Compare preload
+	TIM1->CCMR1 = 0x00006800;
+	// Channel 3 PWM mode1, Compare preload
+	TIM1->CCMR2 = 0x00000068;
+
+	// FIXME what is the best startup value for LEDs?
+	TIM1->CCR2 = 1000; // PWM value for channel 2
+	TIM1->CCR3 = 1000; // PWM value for channel 3
+
+	TIM1->EGR = 1;
+	TIM1->CR1 = 0x0001;
+
 	// TIM2 is used as a 32 bit free-running 1MHz clock.
 	TIM2->PSC = 250; //prescaler
 	TIM2->CNT = 0; // initial counter value
+	TIM2->ARR = 0xFFFFFFFF; // autoreload value 
 	TIM2->EGR = 1; // trigger shadow register update
-	TIM2->CR1 = 0x0001; //enable timer
+	TIM2->CR1 = 0x0001; //enable counter
 
-	// Audio timing uses LPTIM2 timer clocked from PLL3/R at 192MHz
-	// TIM1_CH2 and TIM1_CH3 control Indicator LEDs.
+	// LPTIM2 is used to generate a 48KHz pulse for audio DMA
+	LPTIM2->CFGR = 0x0000;
+	LPTIM2->CR = 0x0001; //enable
+	LPTIM2->ARR = 999;
+	LPTIM2->CR = 0x0005; //count start
+
 	// LPTIM1 can be used to measure PLL2/P or PLL3/R
+}
+
+static void OctoSPIInit(void)
+{
+	// OCTOSPI1->CR = 0x00000001; //enable in indirect write mode
 }
 
 void CoreInit(void)
@@ -360,6 +388,7 @@ void CoreInit(void)
 	// relies on HSE_VALUE being defined
 	SystemCoreClockUpdate();
 
+	// FIXME disable timer interrupt, use TIM2 as the main system timebase
 	// 1ms tick timer, in CMSIS, sets up SysTick counter and enables interrupt.
 	SysTick_Config(SystemCoreClock / 1000);
 
@@ -367,9 +396,9 @@ void CoreInit(void)
 
 	GPIOInit();
 	TimerInit();
+	OctoSPIInit();
 
 	// USB
-	/* Enable VDDUSB */
 	PWR->USBSCR = PWR_USBSCR_USB33SV;
 
 	// FIXME set up OCTOSPI
@@ -377,7 +406,49 @@ void CoreInit(void)
 	// FIXME set up SD card SPI
 	// FIXME set up ADCs
 	// FIXME set up DACs
-	// FIXME set up timers
 	// FIXME set up DMA
 }
+
+uint32_t TimeMicroseconds(void)
+{
+	return TIM2->CNT;
+}
+
+bool ButtonRead(int n)
+{
+	// Button1 PC13
+	// Button2 PB8
+	// Button3 PB7
+	// Button4 PH1
+
+	static const GPIO_TypeDef *ports[4] =
+	{
+		GPIOC,
+		GPIOB,
+		GPIOB,
+		GPIOH
+	};
+
+	static const uint32_t pins[4] =
+	{
+		0x2000,
+		0x0100,
+		0x0080,
+		0x0002
+	};
+
+	const GPIO_TypeDef *gpio = ports[n];
+	uint32_t pin = pins[n];
+
+	return (gpio->IDR & pin) != 0;
+}
+
+void LEDWrite(int n, int val)
+{
+	if (n == 0)
+		TIM1->CCR2 = val;
+	if (n == 1)
+		TIM1->CCR3 = val;
+}
+
 
