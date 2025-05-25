@@ -2,6 +2,8 @@
 #include "gamesquirrel/core.h"
 #include "stm32h523xx.h"
 
+#include <stdio.h> // FIXME testing only
+
 static void ClockInit(void)
 {
 	// set highest voltage on regulator before setting clocks to high speed
@@ -149,8 +151,8 @@ static void GPIOInit(void)
 		( 0 << 12) |  // PA3     ADC3           USART3_TX
 		( 0 << 16) |  // PA4     DAC1           USART3_RX
 		( 0 << 20) |  // PA5     DAC2           LED
-		( 0 << 24) |  // PA6     QSPI
-		( 0 << 28);   // PA7     QSPI
+		( 6 << 24) |  // PA6     QSPI
+		(10 << 28);   // PA7     QSPI
 	GPIOA->AFR[1] =
 		( 0 <<  0) |  // PA8     VideoTE
 		( 1 <<  4) |  // PA9     LED1
@@ -162,9 +164,9 @@ static void GPIOInit(void)
 		( 0 << 28);   // PA15    SD_NSS
 
 	GPIOB->AFR[0] =
-		( 0 <<  0) |  // PB0     QSPI
-		( 0 <<  4) |  // PB1     QSPI
-		( 0 <<  8) |  // PB2     QSPI
+		( 6 <<  0) |  // PB0     QSPI
+		( 6 <<  4) |  // PB1     QSPI
+		( 9 <<  8) |  // PB2     QSPI
 		( 0 << 12) |  // PB3     SD_SCK
 		( 0 << 16) |  // PB4     SD_MISO
 		( 0 << 20) |  // PB5     SD_MOSI
@@ -173,7 +175,7 @@ static void GPIOInit(void)
 	GPIOB->AFR[1] =
 		( 0 <<  0) |  // PB8     Button4
 		( 0 <<  4) |  // (Unused)
-		( 0 <<  8) |  // PB10    QSPI
+		( 9 <<  8) |  // PB10    QSPI
 		( 0 << 12) |  // (Unused)
 		( 0 << 16) |  // PB12    VideoNSS
 		( 0 << 20) |  // PB13    VideoSCK
@@ -202,8 +204,8 @@ static void GPIOInit(void)
 		(0 <<  6) | // PA3     ADC3           USART3_TX
 		(0 <<  8) | // PA4     DAC1           USART3_RX
 		(0 << 10) | // PA5     DAC2           LED
-		(0 << 12) | // PA6     QSPI
-		(0 << 14) | // PA7     QSPI
+		(3 << 12) | // PA6     QSPI
+		(3 << 14) | // PA7     QSPI
 		(0 << 16) | // PA8     VideoTE
 		(0 << 18) | // PA9     LED1
 		(0 << 20) | // PA10    LED2
@@ -213,9 +215,9 @@ static void GPIOInit(void)
 		(0 << 28) | // PA14    Debug
 		(0 << 30);  // PA15    SD_NSS
 	GPIOB->OSPEEDR =
-		(0 << 0 ) | // PB0     QSPI
-		(0 << 2 ) | // PB1     QSPI
-		(0 << 4 ) | // PB2     QSPI
+		(3 << 0 ) | // PB0     QSPI
+		(3 << 2 ) | // PB1     QSPI
+		(3 << 4 ) | // PB2     QSPI
 		(0 << 6 ) | // PB3     SD_SCK
 		(0 << 8 ) | // PB4     SD_MISO
 		(0 << 10) | // PB5     SD_MOSI
@@ -223,7 +225,7 @@ static void GPIOInit(void)
 		(0 << 14) | // PB7     Button3
 		(0 << 16) | // PB8     Button4
 		(0 << 18) | // (Unused)
-		(0 << 20) | // PB10    QSPI
+		(3 << 20) | // PB10    QSPI
 		(0 << 22) | // (Unused)
 		(0 << 24) | // PB12    VideoNSS
 		(0 << 26) | // PB13    VideoSCK
@@ -300,9 +302,9 @@ static void GPIOInit(void)
 		(3 <<  4) | // PA2     ADC2
 		(3 <<  6) | // PA3     ADC3           USART3_TX
 		(3 <<  8) | // PA4     DAC1           USART3_RX
-		(1 << 10) | // PA5     DAC2           LED
-		(3 << 12) | // PA6     QSPI
-		(3 << 14) | // PA7     QSPI
+		(3 << 10) | // PA5     DAC2           LED
+		(2 << 12) | // PA6     QSPI
+		(2 << 14) | // PA7     QSPI
 		(3 << 16) | // PA8     VideoTE
 		(2 << 18) | // PA9     LED1
 		(2 << 20) | // PA10    LED2
@@ -312,9 +314,9 @@ static void GPIOInit(void)
 		(2 << 28) | // PA14    Debug
 		(2 << 30);  // PA15    SD_NSS
 	GPIOB->MODER =
-		(3 << 0 ) | // PB0     QSPI
-		(3 << 2 ) | // PB1     QSPI
-		(3 << 4 ) | // PB2     QSPI
+		(2 << 0 ) | // PB0     QSPI
+		(2 << 2 ) | // PB1     QSPI
+		(2 << 4 ) | // PB2     QSPI
 		(2 << 6 ) | // PB3     SD_SCK
 		(2 << 8 ) | // PB4     SD_MISO
 		(3 << 10) | // PB5     SD_MOSI
@@ -322,7 +324,7 @@ static void GPIOInit(void)
 		(0 << 14) | // PB7     Button3
 		(0 << 16) | // PB8     Button4
 		(0 << 18) | // (Unused)
-		(3 << 20) | // PB10    QSPI
+		(2 << 20) | // PB10    QSPI
 		(0 << 22) | // (Unused)
 		(3 << 24) | // PB12    VideoNSS
 		(3 << 26) | // PB13    VideoSCK
@@ -371,13 +373,52 @@ static void TimerInit(void)
 	LPTIM2->CR = 0x0001; //enable
 	LPTIM2->ARR = 999;
 	LPTIM2->CR = 0x0005; //count start
-
+	// enable compare channel 1 to generate events for DAC DMA
+	LPTIM2->CCR1 = 0;
+	LPTIM2->CCMR1 = 0x00000002
+	;
 	// LPTIM1 can be used to measure PLL2/P or PLL3/R
 }
 
-static void OctoSPIInit(void)
+void OctoSPIInit(void) // FIXME make static eventually
 {
-	// OCTOSPI1->CR = 0x00000001; //enable in indirect write mode
+	// FIXME implement
+	OCTOSPI1->CR = 0x10000001; //enable in indirect read mode
+	OCTOSPI1->DCR1 = 0x02150008;
+	OCTOSPI1->DCR2 = 0x00000080; // FIXME prescaler is 128 for testing, wrap disabled
+	OCTOSPI1->DCR3 = 0x000A0000; // CSBOUND at 1024
+	OCTOSPI1->DCR4 = 0; //refresh disabled
+	OCTOSPI1->TCR = 0x40000000; // setd half clock delay and no dummy cycles
+	OCTOSPI1->CCR =
+		0x00000001 | // instruction 1 byte on one wire
+		0x00002100 | // address 3 bytes on one wire
+		0x01000000;  // data on one wire
+
+	OCTOSPI1->FCR = 0x1B; // clear flags;
+
+	OCTOSPI1->DLR = 8-1; // 8 bytes of data for ReadID command
+	OCTOSPI1->IR = 0x9F; // Read ID command
+	OCTOSPI1->AR = 0x002C5555; // address is don't care for ReadID
+	(void)OCTOSPI1->AR; // FIXME do we need?
+
+	// read 8 bytes
+	volatile uint32_t word0 = OCTOSPI1->DR;
+	volatile uint32_t word1 = OCTOSPI1->DR;
+	(void)word0;
+	(void)word1;
+
+	// SR reports transaction finished but still busy briefly, maybe wait for
+	// both flags.
+	//printf("stat = %.8lX  data = %.8lX %.8lX\r\n", OCTOSPI1->SR, word0, word1);
+	//printf("stat = %.8lX  data = %.8lX %.8lX\r\n", OCTOSPI1->SR, word0, word1);
+
+	// ReadID command
+	// 8 bit command
+	// 24 bit don't care address
+	// no turnaround delay
+	// 8 bit MFID == 0x9D
+	// 8 bit KGD == 0x5D
+	// 48 bit EID
 }
 
 void CoreInit(void)
@@ -405,7 +446,6 @@ void CoreInit(void)
 	// FIXME set up Display SPI
 	// FIXME set up SD card SPI
 	// FIXME set up ADCs
-	// FIXME set up DACs
 	// FIXME set up DMA
 }
 

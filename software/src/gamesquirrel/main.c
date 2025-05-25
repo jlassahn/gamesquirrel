@@ -2,9 +2,12 @@
 // #include "stm32h523xx.h"
 #include "gamesquirrel/core.h"
 #include "gamesquirrel/usb.h"
+#include "gamesquirrel/audio.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+extern void OctoSPIInit(void); // FIXME testing only
 
 static const uint32_t blink_interval_us = 250000;
 
@@ -43,9 +46,9 @@ void _init(void) {
 
 void hw_init(void)
 {
-	// FIXME rename to CoreInit
 	CoreInit();
 	UsbInit();
+	AudioInit();
 }
 
 int main(void)
@@ -74,6 +77,9 @@ int main(void)
 
 		LEDWrite(0, (us / 1000) % 1000);
 		LEDWrite(1, (us / 5000) % 1000);
+
+		OctoSPIInit(); // FIXME for testing only, should be once at beginning
+		AudioStart(NULL, 0); // FIXME needs real data
 
 		printf("Tick %lu %d %d %d %d\r\n",
 				us,

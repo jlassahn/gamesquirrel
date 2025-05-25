@@ -140,8 +140,8 @@ FIXME HSI48 can be used for USB, probably use PLL instead
 
 === DMA
 
-DMA channel for Audio
-DMA channel for video buffer copies
+GPDMA1 Channel 5 -- DMA channel for Audio (large FIFO, no 2D addressing)
+GPDMA1 Channel 6 -- DMA channel for video buffer copies (large FIFO 2d address)
 
 === Timers
 
