@@ -4,6 +4,27 @@
 
 #include <stdio.h> // FIXME testing only
 
+void HardFault_Handler(void)
+{
+	LEDWrite(0, 1000);
+	LEDWrite(1, 0);
+
+	while (true)
+	{
+		uint32_t us = TimeMicroseconds();
+		if (us & 0x100000)
+		{
+			LEDWrite(0, 0);
+			LEDWrite(1, 1000);
+		}
+		else
+		{
+			LEDWrite(0, 1000);
+			LEDWrite(1, 0);
+		}
+	}
+}
+
 static void ClockInit(void)
 {
 	// set highest voltage on regulator before setting clocks to high speed
@@ -380,45 +401,76 @@ static void TimerInit(void)
 	// LPTIM1 can be used to measure PLL2/P or PLL3/R
 }
 
-void OctoSPIInit(void) // FIXME make static eventually
+static void OctoSPIInit(void)
 {
-	// FIXME implement
-	OCTOSPI1->CR = 0x10000001; //enable in indirect read mode
-	OCTOSPI1->DCR1 = 0x02150008;
-	OCTOSPI1->DCR2 = 0x00000080; // FIXME prescaler is 128 for testing, wrap disabled
-	OCTOSPI1->DCR3 = 0x000A0000; // CSBOUND at 1024
-	OCTOSPI1->DCR4 = 0; //refresh disabled
+	/*
+	OctoSPI memory mapped configuration:
+	1. Set up DCR registers for RAM timing
+	2. do an indirect write to put the device into QSPI mode
+	3. set up read timings in  TCR CCR IR ABR
+	4. set up write timings in  WTCR WCCR WIR WABR
+	5. enable memory mapped mode in CR
+
+	Access memory at 0x90000000 (In data cache range)
+	FIXME use ICACHE to map an image into instruction cache range at 0x04000000
+	*/
+
+	// memory chip timing and size
+	OCTOSPI1->DCR1 =
+		0x02000000 | // MTYP is Standard Mode
+		0x00150000 | // DEVSIZE is 4MBytes
+		0x00000000 | // CSHT min CS high time is 1 clock
+		0x00000008 | // DLYBYP Delay bypass enabled
+		0x00000000 | // FRC free running clock off
+		0x00000000;  // CKMODE 0, clock low while idle
+
+	OCTOSPI1->DCR2 =
+		0x00000000 | // WRAPSIZE no wrap
+		0x00000080;  // PRESCALER FIXME prescaler is 128 for testing
+
+	OCTOSPI1->DCR3 = 0x000A0000; // CSBOUND is 1024
+	OCTOSPI1->DCR4 = 0; // REFRESH disabled
+
+	// Enter QSPI mode
+	OCTOSPI1->CR = 0x00000001; //enable in indirect write mode
 	OCTOSPI1->TCR = 0x40000000; // setd half clock delay and no dummy cycles
 	OCTOSPI1->CCR =
 		0x00000001 | // instruction 1 byte on one wire
-		0x00002100 | // address 3 bytes on one wire
-		0x01000000;  // data on one wire
+		0x00000000 | // no address
+		0x00000000;  // no data
 
 	OCTOSPI1->FCR = 0x1B; // clear flags;
 
-	OCTOSPI1->DLR = 8-1; // 8 bytes of data for ReadID command
-	OCTOSPI1->IR = 0x9F; // Read ID command
-	OCTOSPI1->AR = 0x002C5555; // address is don't care for ReadID
-	(void)OCTOSPI1->AR; // FIXME do we need?
+	OCTOSPI1->DLR = 0;
+	OCTOSPI1->IR = 0x35; // Enter QPI command
+	//OCTOSPI1->AR = 0x002C5555; // address is don't care for ReadID
+	while ((OCTOSPI1->SR & 0x22) != 0x02)
+	{}
+	OCTOSPI1->CR = 0x00000000; // disable
 
-	// read 8 bytes
-	volatile uint32_t word0 = OCTOSPI1->DR;
-	volatile uint32_t word1 = OCTOSPI1->DR;
-	(void)word0;
-	(void)word1;
+	// set up memory mapped read timing
+	OCTOSPI1->TCR =
+		0x40000000 | // SSHIFT half-clock delay
+		0x00000006;  // DCYC 6 dummy cycles
+	OCTOSPI1->CCR =
+		0x00000003 | // instruction 1 byte on four wires
+		0x00002300 | // address 3 bytes on four wires
+		0x03000000;  // data on four wires
+	OCTOSPI1->ABR = 0; // no alternate bytes
+	OCTOSPI1->IR = 0xEB; // Fast Read command
 
-	// SR reports transaction finished but still busy briefly, maybe wait for
-	// both flags.
-	//printf("stat = %.8lX  data = %.8lX %.8lX\r\n", OCTOSPI1->SR, word0, word1);
-	//printf("stat = %.8lX  data = %.8lX %.8lX\r\n", OCTOSPI1->SR, word0, word1);
+	// set up memory mapped write timing
+	OCTOSPI1->WTCR = 0x00000000;  // DCYC 0 dummy cycles
+	OCTOSPI1->WCCR =
+		0x20000000 | // Set DQSE for erratum 2.4.1
+		0x00000003 | // instruction 1 byte on four wires
+		0x00002300 | // address 3 bytes on four wires
+		0x03000000;  // data on four wires
+	OCTOSPI1->WABR = 0; // no alternate bytes
+	OCTOSPI1->WIR = 0x38; // Quad Write command
 
-	// ReadID command
-	// 8 bit command
-	// 24 bit don't care address
-	// no turnaround delay
-	// 8 bit MFID == 0x9D
-	// 8 bit KGD == 0x5D
-	// 48 bit EID
+	OCTOSPI1->CR = 0x30000001; //enable in memory map mode
+
 }
 
 void CoreInit(void)
@@ -447,6 +499,7 @@ void CoreInit(void)
 	// FIXME set up SD card SPI
 	// FIXME set up ADCs
 	// FIXME set up DMA
+	// FIXME set up time of day clock
 }
 
 uint32_t TimeMicroseconds(void)

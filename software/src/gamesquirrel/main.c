@@ -7,8 +7,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-extern void OctoSPIInit(void); // FIXME testing only
-
 static const uint32_t blink_interval_us = 250000;
 
 void hw_init(void);
@@ -17,10 +15,6 @@ volatile uint32_t system_ticks = 0;
 
 void SysTick_Handler(void) {
   system_ticks++;
-}
-
-void HardFault_Handler(void) {
-  __asm("BKPT #0\n");
 }
 
 // FIXME why does this get optimized out if not marked used?
@@ -51,6 +45,15 @@ void hw_init(void)
 	AudioInit();
 }
 
+void MemTest(void)
+{
+	volatile uint32_t *buffer = (void *)0x90000000;
+	buffer[0] = 0x12345678;
+	buffer[1] = 0xABCDEF0;
+
+	printf("octospi %.8lX %.8lX\r\n", buffer[0], buffer[1]);
+}
+
 int main(void)
 {
 	hw_init();
@@ -78,8 +81,8 @@ int main(void)
 		LEDWrite(0, (us / 1000) % 1000);
 		LEDWrite(1, (us / 5000) % 1000);
 
-		OctoSPIInit(); // FIXME for testing only, should be once at beginning
 		AudioStart(NULL, 0); // FIXME needs real data
+		MemTest();
 
 		printf("Tick %lu %d %d %d %d\r\n",
 				us,
