@@ -5,6 +5,8 @@ external/STM32H5xx/Source/Templates/system_stm32h5xx.c \
 src/gamesquirrel/core.c \
 src/gamesquirrel/usb.c \
 src/gamesquirrel/audio.c \
+src/gamesquirrel/display.c \
+src/gamesquirrel/sd_card.c \
 src/gamesquirrel/main.c
 
 

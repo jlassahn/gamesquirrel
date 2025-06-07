@@ -2,8 +2,6 @@
 #include "gamesquirrel/core.h"
 #include "stm32h523xx.h"
 
-#include <stdio.h> // FIXME testing only
-
 void HardFault_Handler(void)
 {
 	LEDWrite(0, 1000);
@@ -32,8 +30,6 @@ static void ClockInit(void)
 	while ((PWR->VOSSR & PWR_VOSSR_VOSRDY) == 0)
 	{}
 
-	//  FIXME set up RCC_BDCR (RCC Backup Domain) to enable LSE Oscillator
-
 	// Set up PLL1
 	RCC->PLL1CFGR =
 		0x00030000 | // enable P and Q outputs (R disabled)
@@ -44,7 +40,7 @@ static void ClockInit(void)
 	RCC->PLL1DIVR =
 		((250 - 1) << 0) | // N   VCO = 2*250 = 500MHz
 		((2 - 1) << 9) |   // P   Core clock 500/2 = 250MHz
-		((2 - 1) << 16) |  // Q   SPI2 500/8 = 62.5MHz
+		((8 - 1) << 16) |  // Q   SPI2 500/8 = 62.5MHz
 		((2 - 1) << 24);   // R   Unused
 
 	// Set up PLL2
@@ -161,6 +157,50 @@ static void ClockInit(void)
 		(1 << 4);  // RNGSEL pll1_q
 }
 
+static void LowPowerInit(void)
+{
+	// check if the low power domain is already initialized
+	if ((RCC->BDCR & 0x0001) == 0x0001)
+		return;
+
+	// Backup domain control register unlock
+	PWR->DBPCR = 1;
+
+	// LSE clock
+	RCC->BDCR =
+		0x00000001 | // LSE ON
+		0x00000018 | // LSEDRV high
+		0x00000100;  // RTCSEL use LSE
+
+	// FIXME set up realtime clock
+	// FIXME set up backup RAM
+}
+
+static void CacheInit(void)
+{
+	// default cache attributes for OctoSPI are write-thru no allocate.
+	// make a emory attribute region that makes OctoSPI write-back
+	MPU->RNR = 0; // set up region 0
+	MPU->RBAR = 0x90000000; // base (not sharable which shouldn't matter)
+	MPU->RLAR = 0x9FFFFFE1; // Limit (attr 0, enable)
+	MPU->MAIR0 = 0xFF; // inner and outer write-back with allocate
+	MPU->MAIR1 = 0;
+	MPU->CTRL = 0x05; // enabled, allow defaults
+
+	// FIXME use ICACHE to map external memory at 0x04000000
+
+	ICACHE->CR = 0x0006; // invalidate ICACHE
+	while (ICACHE->SR & 1) // wait for busy
+	{}
+	ICACHE->CR = 0x0005; // enable ICACHE
+
+	DCACHE1->CR = 0x0002; // invalidate full DCACHE
+	while (DCACHE1->SR & 9) // wait for busy bits
+	{}
+
+	DCACHE1->CR = 0x80000001; // enable DCACHE, increment mode
+}
+
 static void GPIOInit(void)
 {
 	// Alternate Function from tables in data sheets
@@ -188,9 +228,9 @@ static void GPIOInit(void)
 		( 6 <<  0) |  // PB0     QSPI
 		( 6 <<  4) |  // PB1     QSPI
 		( 9 <<  8) |  // PB2     QSPI
-		( 0 << 12) |  // PB3     SD_SCK
-		( 0 << 16) |  // PB4     SD_MISO
-		( 0 << 20) |  // PB5     SD_MOSI
+		( 5 << 12) |  // PB3     SD_SCK
+		( 5 << 16) |  // PB4     SD_MISO
+		( 5 << 20) |  // PB5     SD_MOSI
 		( 0 << 24) |  // PB6     SD_Detect
 		( 0 << 28);   // PB7     Button3
 	GPIOB->AFR[1] =
@@ -199,9 +239,9 @@ static void GPIOInit(void)
 		( 9 <<  8) |  // PB10    QSPI
 		( 0 << 12) |  // (Unused)
 		( 0 << 16) |  // PB12    VideoNSS
-		( 0 << 20) |  // PB13    VideoSCK
+		( 5 << 20) |  // PB13    VideoSCK
 		( 0 << 24) |  // PB14    VideoCMD
-		( 0 << 28);   // PB15    VideoMOSI
+		( 5 << 28);   // PB15    VideoMOSI
 
 	GPIOC->AFR[0] = 0;
 	GPIOC->AFR[1] = 0;
@@ -234,24 +274,24 @@ static void GPIOInit(void)
 		(2 << 24) | // PA12    USB            USB
 		(0 << 26) | // PA13    Debug
 		(0 << 28) | // PA14    Debug
-		(0 << 30);  // PA15    SD_NSS
+		(2 << 30);  // PA15    SD_NSS
 	GPIOB->OSPEEDR =
 		(3 << 0 ) | // PB0     QSPI
 		(3 << 2 ) | // PB1     QSPI
 		(3 << 4 ) | // PB2     QSPI
-		(0 << 6 ) | // PB3     SD_SCK
-		(0 << 8 ) | // PB4     SD_MISO
-		(0 << 10) | // PB5     SD_MOSI
+		(2 << 6 ) | // PB3     SD_SCK
+		(2 << 8 ) | // PB4     SD_MISO
+		(2 << 10) | // PB5     SD_MOSI
 		(0 << 12) | // PB6     SD_Detect
 		(0 << 14) | // PB7     Button3
 		(0 << 16) | // PB8     Button4
 		(0 << 18) | // (Unused)
 		(3 << 20) | // PB10    QSPI
 		(0 << 22) | // (Unused)
-		(0 << 24) | // PB12    VideoNSS
-		(0 << 26) | // PB13    VideoSCK
-		(0 << 28) | // PB14    VideoCMD
-		(0 << 30);  // PB15    VideoMOSI
+		(2 << 24) | // PB12    VideoNSS
+		(2 << 26) | // PB13    VideoSCK
+		(2 << 28) | // PB14    VideoCMD
+		(2 << 30);  // PB15    VideoMOSI
 	GPIOC->OSPEEDR = 0;
 	GPIOD->OSPEEDR = 0;
 	GPIOH->OSPEEDR = 0;
@@ -270,7 +310,7 @@ static void GPIOInit(void)
 		(0 << 10) | // PA5     DAC2           LED
 		(0 << 12) | // PA6     QSPI
 		(0 << 14) | // PA7     QSPI
-		(0 << 16) | // PA8     VideoTE
+		(1 << 16) | // PA8     VideoTE
 		(0 << 18) | // PA9     LED1
 		(0 << 20) | // PA10    LED2
 		(0 << 22) | // PA11    USB            USB
@@ -283,9 +323,9 @@ static void GPIOInit(void)
 		(0 << 2 ) | // PB1     QSPI
 		(0 << 4 ) | // PB2     QSPI
 		(0 << 6 ) | // PB3     SD_SCK
-		(0 << 8 ) | // PB4     SD_MISO
+		(2 << 8 ) | // PB4     SD_MISO
 		(0 << 10) | // PB5     SD_MOSI
-		(0 << 12) | // PB6     SD_Detect
+		(1 << 12) | // PB6     SD_Detect
 		(2 << 14) | // PB7     Button3
 		(2 << 16) | // PB8     Button4
 		(0 << 18) | // (Unused)
@@ -306,8 +346,8 @@ static void GPIOInit(void)
 		(2 << 2);  // PH1     Button2        OSC_OUT
 
 	// initial output data
-	GPIOA->ODR = 0;
-	GPIOB->ODR = 0;
+	GPIOA->ODR = 0x8000; // PA15   SD NSS
+	GPIOB->ODR = 0x1000; // PB12   Video NSS
 	GPIOC->ODR = 0;
 	GPIOD->ODR = 0;
 	GPIOH->ODR = 0;
@@ -326,31 +366,31 @@ static void GPIOInit(void)
 		(3 << 10) | // PA5     DAC2           LED
 		(2 << 12) | // PA6     QSPI
 		(2 << 14) | // PA7     QSPI
-		(3 << 16) | // PA8     VideoTE
+		(0 << 16) | // PA8     VideoTE
 		(2 << 18) | // PA9     LED1
 		(2 << 20) | // PA10    LED2
 		(2 << 22) | // PA11    USB            USB
 		(2 << 24) | // PA12    USB            USB
 		(2 << 26) | // PA13    Debug
 		(2 << 28) | // PA14    Debug
-		(2 << 30);  // PA15    SD_NSS
+		(1 << 30);  // PA15    SD_NSS
 	GPIOB->MODER =
 		(2 << 0 ) | // PB0     QSPI
 		(2 << 2 ) | // PB1     QSPI
 		(2 << 4 ) | // PB2     QSPI
 		(2 << 6 ) | // PB3     SD_SCK
 		(2 << 8 ) | // PB4     SD_MISO
-		(3 << 10) | // PB5     SD_MOSI
-		(3 << 12) | // PB6     SD_Detect
+		(2 << 10) | // PB5     SD_MOSI
+		(0 << 12) | // PB6     SD_Detect
 		(0 << 14) | // PB7     Button3
 		(0 << 16) | // PB8     Button4
 		(0 << 18) | // (Unused)
 		(2 << 20) | // PB10    QSPI
 		(0 << 22) | // (Unused)
-		(3 << 24) | // PB12    VideoNSS
-		(3 << 26) | // PB13    VideoSCK
-		(3 << 28) | // PB14    VideoCMD
-		(3 << 30);  // PB15    VideoMOSI
+		(1 << 24) | // PB12    VideoNSS
+		(2 << 26) | // PB13    VideoSCK
+		(1 << 28) | // PB14    VideoCMD
+		(2 << 30);  // PB15    VideoMOSI
 	GPIOC->MODER = 0x03FFFFFF |
 		(0 << 26) | // PC13    Button1        Button
 		(3 << 28) | // PC14    OSC32_IN       OSC32_IN
@@ -412,7 +452,6 @@ static void OctoSPIInit(void)
 	5. enable memory mapped mode in CR
 
 	Access memory at 0x90000000 (In data cache range)
-	FIXME use ICACHE to map an image into instruction cache range at 0x04000000
 	*/
 
 	// memory chip timing and size
@@ -426,7 +465,7 @@ static void OctoSPIInit(void)
 
 	OCTOSPI1->DCR2 =
 		0x00000000 | // WRAPSIZE no wrap
-		0x00000080;  // PRESCALER FIXME prescaler is 128 for testing
+		0x00000000;  // PRESCALER 0
 
 	OCTOSPI1->DCR3 = 0x000A0000; // CSBOUND is 1024
 	OCTOSPI1->DCR4 = 0; // REFRESH disabled
@@ -470,12 +509,123 @@ static void OctoSPIInit(void)
 	OCTOSPI1->WIR = 0x38; // Quad Write command
 
 	OCTOSPI1->CR = 0x30000001; //enable in memory map mode
+}
 
+static void SPIInit(void)
+{
+	// Set up SPI peripherals for the display and SD card.
+	// This only configures the SPI ports, initialization of the devices
+	// happens later.
+
+	// Neither interface has really consistent transaction sizes, so
+	// we can't use TSIZE effectively.  This means we also can't rely on
+	// automatic chip select control, so the CS pins are set up as general
+	// purpose outputs.
+
+	// set up Display SPI2
+	SPI2->CR2 = 0; // TSIZE
+	SPI2->CFG1 =
+		0x50000000 | // FIXME prescaler divide by 64 for test
+		// 0x80000000 | // prescaler disabled
+		// 0x00008000 | // FIXME DMA enable
+		0x00000007;  // Data size 8 bits
+	SPI2->CFG2 =
+		0x20000000 | // SSOE enable peripheral control of SS
+		0x00020000 | // COMM Tx only
+		0x00000000 | // Clock Idles low, samples on rising edge
+		0x00400000; // MASTER
+	SPI2->IFCR = 0x0BF8; // clear all flags
+	SPI2->CR1 = 0x00000001; // SPE Enable
+	SPI2->CR1 = 0x00000201; // CSTART
+
+	// set up SD card SPI1
+	SPI1->CR1 = 0; // TSIZE
+	SPI1->CFG1 =
+		0x40000000 | // FIXME prescaler divide by 32 for test
+		// 0x80000000 | // prescaler disabled
+		0x00000007;  // Data size 8 bits
+	SPI1->CFG2 =
+		0x20000000 | // SSOE enable peripheral control of SS
+		0x00000000 | // Clock Idles low, samples on rising edge
+		0x00400000; // MASTER
+	SPI1->IFCR = 0x0BF8; // clear all flags
+	SPI1->CR1 = 0x00000001;  // SPE Enable
+	SPI1->CR1 = 0x00000201;  // CSTART Start
+}
+
+static void ADCInit(void)
+{
+/*
+ADC1
+	input 0, Joystick X
+	input 1, Joystick Y
+	input 14, Unused pin PA2
+	input 15, Unused pin PA3
+	input 17, Vrefint  1.216v
+ADC2
+	input 0, Joystick X
+	input 1, Joystick Y
+	input 14, Unused pin PA2
+	input 15, Unused pin PA3
+	input 16, Vbat
+*/
+	ADC12_COMMON->CCR =
+		0x01000000 | // VBATEN
+		0x00400000 | // VREFEN
+		0x00030000;  // CKMODE clock == hclk/4 == 62.5MHz
+
+	ADC1->CR = 0x00000000; // disable DEEPPWD
+	ADC2->CR = 0x00000000;
+	ADC1->CR = 0x10000000; // enable ADVREGEN
+	ADC2->CR = 0x10000000;
+	// wait for voltage regulator to stabilize 10us max
+
+	uint32_t t0 = TimeMicroseconds();
+	while (TimeMicroseconds()-t0 < 11)
+	{}
+
+	ADC1->ISR = 0x0001; // clear ADRDY
+	ADC2->ISR = 0x0001;
+	ADC1->CR = 0x10000001; // set ADEN
+	ADC2->CR = 0x10000001;
+	// wait for ADRDY
+	while (((ADC1->ISR & 0x0001) == 0) || ((ADC2->ISR & 0x0001) == 0))
+	{}
+
+	ADC1->CFGR =
+		//0x02000000 | // JAUTO
+		0x00008000 | // ALIGN left
+		0x00002000 | // CONT continuous conversion
+		0x00001000;  // OVRMOD overwrite output register
+	ADC2->CFGR = 0x0000B000;
+
+	ADC1->CFGR2 = 0;
+	ADC2->CFGR2 = 0;
+	ADC1->SMPR1 = 5 + 5*8; // sample time for channel 0 (FIXME check)
+	ADC2->SMPR1 = 5; // sample time for channel 0 (FIXME check)
+	ADC1->SMPR2 = 5 << 21; // sample time for channel 17 (FIXME check)
+	ADC1->SQR1 = 0 << 6; // Single sample from channel 0
+	ADC2->SQR1 = 1 << 6; // Single sample from channel 1 // FIXME
+
+	ADC1->CR = 0x10000005; // set ADSTART
+	ADC2->CR = 0x10000005;
+
+}
+
+uint32_t ADCRead(int n)
+{
+	// FIXME fake
+	if (n==1)
+		return ADC1->DR;
+	else
+		return ADC2->DR;
 }
 
 void CoreInit(void)
 {
 	ClockInit();
+
+	LowPowerInit();
 
 	// This just sets the SystemCoreClock variable,
 	// relies on HSE_VALUE being defined
@@ -485,21 +635,16 @@ void CoreInit(void)
 	// 1ms tick timer, in CMSIS, sets up SysTick counter and enables interrupt.
 	SysTick_Config(SystemCoreClock / 1000);
 
-	// FIXME is ICACHE enabled?  DCACHE?
+	CacheInit();
 
 	GPIOInit();
 	TimerInit();
 	OctoSPIInit();
+	SPIInit();
+	ADCInit();
 
 	// USB
 	PWR->USBSCR = PWR_USBSCR_USB33SV;
-
-	// FIXME set up OCTOSPI
-	// FIXME set up Display SPI
-	// FIXME set up SD card SPI
-	// FIXME set up ADCs
-	// FIXME set up DMA
-	// FIXME set up time of day clock
 }
 
 uint32_t TimeMicroseconds(void)

@@ -1,11 +1,15 @@
 
-// #include "stm32h523xx.h"
+//#include "stm32h523xx.h"
 #include "gamesquirrel/core.h"
 #include "gamesquirrel/usb.h"
 #include "gamesquirrel/audio.h"
+#include "gamesquirrel/sd_card.h"
+#include "gamesquirrel/display.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+uint32_t ADCRead(int n); // FIXME fake
 
 static const uint32_t blink_interval_us = 250000;
 
@@ -48,10 +52,28 @@ void hw_init(void)
 void MemTest(void)
 {
 	volatile uint32_t *buffer = (void *)0x90000000;
-	buffer[0] = 0x12345678;
-	buffer[1] = 0xABCDEF0;
 
-	printf("octospi %.8lX %.8lX\r\n", buffer[0], buffer[1]);
+	static int base = 0;
+
+	uint32_t t0 = TimeMicroseconds();
+	for (int i=0; i<4096; i++)
+	{
+		buffer[base+i] = ((uint32_t)i)*0x10203041;
+	}
+	uint32_t t1 = TimeMicroseconds();
+	printf("write time = %lu  ", t1-t0);
+
+	int errs = 0;
+	t0 = TimeMicroseconds();
+	for (int i=0; i<4096; i++)
+	{
+		if (buffer[base+i] != ((uint32_t)i)*0x10203041)
+			errs ++;
+	}
+	t1 = TimeMicroseconds();
+	printf("read time = %lu  errs = %d\r\n", t1-t0, errs);
+
+	base = (base + 4096) & (1024*1024-1);
 }
 
 int main(void)
@@ -82,10 +104,13 @@ int main(void)
 		LEDWrite(1, (us / 5000) % 1000);
 
 		AudioStart(NULL, 0); // FIXME needs real data
-		MemTest();
+		//MemTest();
+		//SDCardInit();
+		//DisplayInit();
 
-		printf("Tick %lu %d %d %d %d\r\n",
+		printf("Tick %lu %.8lX %d %d %d %d\r\n",
 				us,
+				ADCRead(1),
 				ButtonRead(0),
 				ButtonRead(1),
 				ButtonRead(2),
