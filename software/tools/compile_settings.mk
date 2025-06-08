@@ -61,8 +61,7 @@ LD_ARMSYS_OPTS := \
 -Wl,--print-memory-usage \
 -nostdlib \
 -nostartfiles \
---specs=nosys.specs \
--Wl,-T,src/system/STM32H503xx_FLASH.ld
+--specs=nosys.specs
 
 LIBS_ARMSYS := \
 -lgcc \

@@ -5,9 +5,26 @@
 #include "gamesquirrel/audio.h"
 #include "gamesquirrel/sd_card.h"
 #include "gamesquirrel/display.h"
+#include "gamesquirrel/system.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+const SystemLib system_table __attribute__((section (".syslib"))) __attribute__((used)) =
+{
+	{ LIB_SYSTEM, 0, 1, 0 },
+	NULL, //void *(*FindLibrary)(uint8_t id, uint8_t major_version);
+
+	NULL, //void *(*FastAlloc)(int bytes);
+	NULL, //void (*FastFree)(void *ptr);
+
+	NULL, //bool (*SDCardIsInserted)(void);
+	NULL, //int (*SDCardInitialize)(void);
+	NULL, //int (*SDCardReadBlock)(int32_t block, uint8_t data_out[512]);
+	NULL, //int (*SDCardWriteBlock)(int32_t block, uint8_t data_in[512]);
+};
+const SystemLib *system = &system_table;
+
 
 uint32_t ADCRead(int n); // FIXME fake
 

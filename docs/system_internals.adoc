@@ -38,6 +38,7 @@ FAT filesystem spec?
 == Memory Organization
 
 The GameSquirrel has three kinds of system memory:
+
 * 272KBytes of fast SRAM.
 * 512KBytes of Flash ROM 
 * 4MBytes of slow RAM.
@@ -48,33 +49,128 @@ The main memory of the GameSquirrel is a serial RAM chip which provides 4
 Megabytes of space.  The game's code and general data are loaded here by
 the system software.
 
-The maximum speed of the main memory is about 48 Megabytes per second, which
-is much slower than the 240MHz main processor.
+The maximum speed of the main memory is about 50 Megabytes per second, which
+is much slower than the 250MHz main processor.
 
+The processor has an instruction cache and data cache to make access to the
+slow RAM more efficient.  To allow both caches to access the same memory, the
+same slow ram memory is mapped to two different address ranges.  If the
+memory is accessed through addresses 0x9000000 ... 0x903FFFFF it will be
+treated as data memory and accessed through the data cache.  If the memory
+is accessed through addresses 0x04000000 ... 0x043FFFFF it will be treated
+as executable read-only memory and accessed through the instruction cache.
 
-== Memory map
+The two views of memory are aliases of the same RAM, but the two caches
+are not kept consistent with each other.  In general, you should only access
+read/write data in slow memory through the data cache address range and only
+access read-only data or executable code through the instruction cache address
+range.  If you attempt to access the same data through both memory ranges,
+you must explicitly flush or invalidate the caches to avoid seeing stale
+data.
 
-0x9000_0000 ... 0x903F_FFFF Slow memory data image
-0x2000_0000 ... 0x2004_3FFF Fast SRAM
-0x0800_0000 ... 0x0807_FFFF Flash ROM
-0x0400_0000 ... 0x043F_FFFF Slow memory code image
+=== Fast RAM
 
-Slow Memory Typical Organization
-.text
-.data
-.bss
-heap
-0x3F_C000 ... 0x3F_FFFF 16K Reserved for system services
+The processor has 272KBytes of SRAM that run at the full CPU speed.  Most
+of this memory is available for use by the application, although the top
+4KBytes is reserved for use by the system.
 
-Fast Memory Typical Organization
-stack
-heap
-0x2004_3000 ... 0x2004_3FFF 4K Reserved for system services
+The stack is located at the bottom of fast RAM.  Normally 12KBytes are reserved
+for the stack, but this can be adjusted in the program configuration file if
+one is provided.
 
-FLASH Memory Organization
-0x0800_0000 Interrupt Vectors (can be moved by the app if REALLY careful)
-0x0800_0400 SystemLib v1 Library table
-remaining is 512K system code and data
+The remaining memory can be allocated for application use using
+FIXME what system calls?
+
+=== Flash ROM
+
+The processor has 512KBytes of internal flash memory which contains the
+system software and related data.  The only two memory addresses in Flash
+which are guaranteed to be consistent across versions of the system software
+are
+
+* The interrupt vector table, which is at address 0x08000000.
+* The system library table, which is at address 0x08000400.
+
+=== Memory map
+
+[cols=".^1,.^1,.^2"]
+|===
+| Memory |Address | Purpose
+
+.8+| DCACHE RAM
+| 0x903F_FFFF
+.2+| System Data
+
+| 0x903F_C000
+
+| 0x903F_BFFF
+.2+| Application Heap
+
+| ...
+
+| ...
+.2+| Application Data
+
+| ...
+
+| ...
+.2+| ALIAS (Application Code)
+
+| 0x9000_0000
+
+.6+| SRAM
+| 0x2004_3FFF
+.2+| System Data
+
+| 0x2004_3000
+
+| 0x2004_2FFF
+.2+| Application Heap
+
+| 0x2000_3000
+
+| 0x2000_2FFF
+.2+| Stack
+
+| 0x2000_0000
+
+.6+| Flash ROM
+| 0x0807_FFFF
+.2+| System Code
+
+| ...
+
+| ...
+.2+| System Library Table
+
+| 0x0800_0400
+
+| ...
+.2+| System Interrupt Table
+
+| 0x0800_0000
+
+.8+| ICACHE RAM
+| 0x043F_FFFF
+.2+| ALIAS (System Data)
+
+| 0x043F_C000
+
+| 0x043F_BFFF
+.2+| ALIAS (Application Heap)
+
+| ...
+
+| ...
+.2+| ALIAS (Application Data)
+
+| ...
+
+| ...
+.2+| Application Code
+
+| 0x0400_0000
+|===
 
 == Interfaces to Peripherals
 
@@ -165,3 +261,10 @@ ADC2
 	input 14, Unused pin PA2
 	input 15, Unused pin PA3
 	input 16, Vbat
+
+== The Game Program and Filesystem
+
+=== The program configuration file
+
+=== The main executable
+
