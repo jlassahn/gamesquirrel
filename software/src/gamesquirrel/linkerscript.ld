@@ -31,13 +31,13 @@ SECTIONS
 	/* Executable code */
 	.text :
 	{
-		*(.text)
 		*(.text*)
+		*(.text)
 		*(.eh_frame)
 		KEEP (*(.init))
 		KEEP (*(.fini))
 
-		_etext = .;        /* FIXME Do we need this? */
+		/* _etext = .;  */       /* FIXME Do we need this? */
 	} > FLASH
 
 	/* Read-only data */
@@ -91,17 +91,13 @@ SECTIONS
 	/* Uninitialized data */
 	.bss :
 	{
-		/* FIXME do we need all these duplicate symbols? _sbss, end, etc? */
 		_sbss = .;
-		__bss_start__ = _sbss;
 		*(.bss)
 		*(.bss*)
 		*(COMMON)
 		. = ALIGN(4);
 		_ebss = .;
-		__bss_end__ = _ebss;
-		end = _ebss;
-		_end = _ebss;
+		end = _ebss; /* Beginning of heap. */
 	} >SRAM
 
 	/* Remove information from the compiler libraries */

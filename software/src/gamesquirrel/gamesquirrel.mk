@@ -1,7 +1,6 @@
 
 GS_SRCS := \
 src/gamesquirrel/boot.s \
-src/gamesquirrel/system_stm32h5xx.c \
 src/gamesquirrel/interrupt_vectors.c \
 src/gamesquirrel/core.c \
 src/gamesquirrel/usb.c \

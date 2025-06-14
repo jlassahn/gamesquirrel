@@ -30,6 +30,8 @@ static void ClockInit(void)
 	while ((PWR->VOSSR & PWR_VOSSR_VOSRDY) == 0)
 	{}
 
+	RCC->CIER = 0U;
+
 	// Set up PLL1
 	RCC->PLL1CFGR =
 		0x00030000 | // enable P and Q outputs (R disabled)
@@ -623,17 +625,21 @@ uint32_t ADCRead(int n)
 
 void CoreInit(void)
 {
+	SCB->VTOR = FLASH_BASE; // Set up interrupt vector table
+	SCB->CPACR |= ((3UL << 20U)|(3UL << 22U)); // Enable Floating Point
+
 	ClockInit();
 
 	LowPowerInit();
 
 	// This just sets the SystemCoreClock variable,
 	// relies on HSE_VALUE being defined
-	SystemCoreClockUpdate();
+	// SystemCoreClockUpdate();
 
+	const int clock = 250000000;
 	// FIXME disable timer interrupt, use TIM2 as the main system timebase
 	// 1ms tick timer, in CMSIS, sets up SysTick counter and enables interrupt.
-	SysTick_Config(SystemCoreClock / 1000);
+	SysTick_Config(clock / 1000);
 
 	CacheInit();
 
