@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+void SystemInit(void);
+
 const SystemLib system_table __attribute__((section (".syslib"))) __attribute__((used)) =
 {
 	{ LIB_SYSTEM, 0, 1, 0 },
@@ -61,6 +63,7 @@ void _init(void) {
 
 void hw_init(void)
 {
+	SystemInit();
 	CoreInit();
 	UsbInit();
 	AudioInit();
