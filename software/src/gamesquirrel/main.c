@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// void SystemInit(void);
+uint8_t xdram_buffer[512] __attribute__((section (".xdram"))) __attribute__((used));
 
 const SystemLib system_table __attribute__((section (".syslib"))) __attribute__((used)) =
 {
@@ -63,7 +63,6 @@ void _init(void) {
 
 void hw_init(void)
 {
-	// SystemInit();
 	CoreInit();
 	UsbInit();
 	AudioInit();
@@ -102,6 +101,8 @@ int main(void)
 	UsbStart();
 
 	printf("Hello, world\r\n");
+
+	xdram_buffer[0] = 17;
 
 	uint32_t last_us = TimeMicroseconds();
 	while (true)

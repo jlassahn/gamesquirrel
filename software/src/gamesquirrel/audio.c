@@ -9,6 +9,8 @@
 static AudioSample sample_table[1024] __attribute__((aligned (4)));
 static bool running = false;
 
+// FIXME design and implement audio API
+
 void GPDMA1_Channel5_IRQHandler(void)
 {
 	// FIXME react to done flag specifically

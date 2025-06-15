@@ -4,6 +4,9 @@
 #include "gamesquirrel/display.h"
 #include "stm32h523xx.h"
 
+// FIXME design and implement display API
+// FIXME add VSync interrupt
+
 void DisplayInit(void)
 {
 	// FIXME implement

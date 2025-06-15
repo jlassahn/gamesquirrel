@@ -82,8 +82,8 @@ SECTIONS
 	.data :
 	{
 		_sdata = .;
-		*(.data)
 		*(.data*)
+		*(.data)
 		_edata = .;
 	} >SRAM AT> FLASH
 	_sidata = LOADADDR(.data);
@@ -92,13 +92,25 @@ SECTIONS
 	.bss :
 	{
 		_sbss = .;
-		*(.bss)
 		*(.bss*)
+		*(.bss)
 		*(COMMON)
 		. = ALIGN(4);
 		_ebss = .;
 		end = _ebss; /* Beginning of heap. */
 	} >SRAM
+
+	/* Uninitialized data in XDRAM */
+	.xdram (NOLOAD):
+	{
+		*(.xdram)
+	} > XDRAM
+
+	/* Uninitialized data in XSRAM */
+	.xsram (NOLOAD):
+	{
+		*(.xsram)
+	} > XSRAM
 
 	/* Remove information from the compiler libraries */
 	/DISCARD/ :

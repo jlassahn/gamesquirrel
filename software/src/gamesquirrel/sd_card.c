@@ -5,10 +5,11 @@
 #include "gamesquirrel/core.h"
 #include <stdio.h> // FIXME testing
 
+// FIXME card presence detect
+
+// FIXME design and implement SD Card API
 bool SDCardInit(void)
 {
-	// FIXME implement
-
 	// violates strict aliasing rules
 	volatile uint8_t *tx_reg = (volatile uint8_t *)&SPI1->TXDR;
 	volatile uint8_t *rx_reg = (volatile uint8_t *)&SPI1->RXDR;

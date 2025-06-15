@@ -1,6 +1,7 @@
 
 #include "gamesquirrel/core.h"
 #include "stm32h523xx.h"
+#include <string.h>
 
 void HardFault_Handler(void)
 {
@@ -175,9 +176,12 @@ static void LowPowerInit(void)
 		0x00000100;  // RTCSEL use LSE
 
 	// FIXME set up realtime clock
+	// FIXME functions to access realtime clock
+	// FIXME calendar and timezone stuff
 	// FIXME set up backup RAM
 }
 
+// FIXME do we need a cache control API?
 static void CacheInit(void)
 {
 	// default cache attributes for OctoSPI are write-thru no allocate.
@@ -612,15 +616,13 @@ ADC2
 	ADC1->CR = 0x10000005; // set ADSTART
 	ADC2->CR = 0x10000005;
 
+	// FIXME lay out ADC sources for collection
 }
 
-uint32_t ADCRead(int n)
+static void XRamInit(void)
 {
-	// FIXME fake
-	if (n==1)
-		return ADC1->DR;
-	else
-		return ADC2->DR;
+	memset((char *)0x903FC000, 0, 0x4000); // XDRAM
+	memset((char *)0x20043000, 0, 0x1000); // XSRAM
 }
 
 void CoreInit(void)
@@ -631,10 +633,6 @@ void CoreInit(void)
 	ClockInit();
 
 	LowPowerInit();
-
-	// This just sets the SystemCoreClock variable,
-	// relies on HSE_VALUE being defined
-	// SystemCoreClockUpdate();
 
 	const int clock = 250000000;
 	// FIXME disable timer interrupt, use TIM2 as the main system timebase
@@ -651,6 +649,8 @@ void CoreInit(void)
 
 	// USB
 	PWR->USBSCR = PWR_USBSCR_USB33SV;
+
+	XRamInit();
 }
 
 uint32_t TimeMicroseconds(void)
@@ -693,6 +693,17 @@ void LEDWrite(int n, int val)
 		TIM1->CCR2 = val;
 	if (n == 1)
 		TIM1->CCR3 = val;
+}
+
+uint32_t ADCRead(int n)
+{
+	// FIXME read from all ADC sources
+	// FIXME put battery state of charge measurement somewhere
+	// FIXME fake
+	if (n==1)
+		return ADC1->DR;
+	else
+		return ADC2->DR;
 }
 
 
