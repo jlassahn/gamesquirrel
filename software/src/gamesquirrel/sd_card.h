@@ -1,3 +1,7 @@
+/*
+  SPDX-License-Identifier: Apache-2.0
+  Copyright 2025 Jeff Lassahn
+*/
 
 #ifndef INCLUDED_SD_CARD_H
 #define INCLUDED_SD_CARD_H

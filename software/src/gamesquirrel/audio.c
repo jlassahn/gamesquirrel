@@ -1,3 +1,7 @@
+/*
+  SPDX-License-Identifier: Apache-2.0
+  Copyright 2025 Jeff Lassahn
+*/
 
 #include "gamesquirrel/audio.h"
 #include "stm32h523xx.h"

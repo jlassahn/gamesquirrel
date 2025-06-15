@@ -1,3 +1,7 @@
+/*
+  SPDX-License-Identifier: Apache-2.0
+  Copyright 2025 Jeff Lassahn
+*/
 
 #ifndef INCLUDED_USB_H
 #define INCLUDED_USB_H

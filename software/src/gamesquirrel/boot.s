@@ -1,3 +1,7 @@
+/*
+  SPDX-License-Identifier: Apache-2.0
+  Copyright 2025 Jeff Lassahn
+*/
 
 /*
   Modified from startup_stm32h523xx.s
