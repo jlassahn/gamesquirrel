@@ -7,8 +7,8 @@
 typedef struct AudioSample AudioSample;
 struct AudioSample
 {
-	int16_t right;
-	int16_t left;
+    int16_t right;
+    int16_t left;
 };
 
 void AudioInit(void);

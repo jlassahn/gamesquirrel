@@ -8,9 +8,9 @@
 typedef enum SDCardError SDCardError;
 enum SDCardError
 {
-	SD_OK,
-	SD_HWFAIL,
-	SD_OUT_OF_RANGE
+    SD_OK,
+    SD_HWFAIL,
+    SD_OUT_OF_RANGE
 };
 
 bool SDCardIsPresent(void);

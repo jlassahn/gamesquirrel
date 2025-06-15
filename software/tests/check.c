@@ -6,10 +6,10 @@
 
 int main(void)
 {
-  CHECK(1 == 0);
-  CHECK(17);
-  CHECK(1+1-2);
+    CHECK(1 == 0);
+    CHECK(17);
+    CHECK(1+1-2);
 
-  return 0;
+    return 0;
 }
 

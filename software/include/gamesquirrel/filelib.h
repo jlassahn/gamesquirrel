@@ -12,16 +12,15 @@
 typedef struct FileLib1 FileLib1;
 struct FileLib1
 {
-  LibraryInfo info;
+    LibraryInfo info;
 
-  int32_t sizeof_filesystem;
-  int32_t sizeof_file;
+    int32_t sizeof_filesystem;
+    int32_t sizeof_file;
 
-  int OpenFilesystem(Filesystem *fs);
-  void CloseFilesystem(Filesystem *fs);
-  int OpenFile(Filesystem *fs, const char *name, File *file);
-  void Close(File *file);
-  int Read(File *file, uint8_t *data_out, int32_t length);
-
+    int OpenFilesystem(Filesystem *fs);
+    void CloseFilesystem(Filesystem *fs);
+    int OpenFile(Filesystem *fs, const char *name, File *file);
+    void Close(File *file);
+    int Read(File *file, uint8_t *data_out, int32_t length);
 };
 
