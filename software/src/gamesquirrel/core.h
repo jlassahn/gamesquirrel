@@ -8,6 +8,7 @@
 
 void CoreInit(void);
 
+void DelayClocks(uint32_t n);
 uint32_t TimeMicroseconds(void);
 
 bool ButtonRead(int n); // n in 0 ... 3

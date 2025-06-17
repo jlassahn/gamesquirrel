@@ -170,7 +170,6 @@ struct InterruptVectors
 extern uint32_t _estack;
 extern void Reset_Handler(void);
 extern void HardFault_Handler(void);
-extern void SysTick_Handler(void); // FIXME remove?
 extern void GPDMA1_Channel5_IRQHandler(void);
 extern void USB_DRD_FS_IRQHandler(void);
 
@@ -187,7 +186,7 @@ const InterruptVectors interrupt_vectors __attribute__((section (".isr_vector"))
     .SVC = DefaultHandler,
     .DebugMon = DefaultHandler,
     .PendSV = DefaultHandler,
-    .SysTick = SysTick_Handler,
+    .SysTick = DefaultHandler,
     .WWDG = DefaultHandler,
     .PVD_AVD = DefaultHandler,
     .RTC = DefaultHandler,

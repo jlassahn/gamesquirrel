@@ -8,6 +8,7 @@
 #include "stm32h503xx.h"
 #include "gamesquirrel/usb.h"
 #include "gamesquirrel/charqueue.h"
+#include "gamesquirrel/core.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -224,44 +225,36 @@ static inline void SetChannelToggle(volatile uint32_t *chep, uint32_t mask)
 
 void UsbInit(void)
 {
-  // Follow the RM mentions to use a special ordering of PDWN and FRES
-  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
-    asm("NOP");
-  }
+    // Perform USB peripheral reset
+    DelayClocks(250);
+    USB_DRD_FS->CNTR = USB_CNTR_USBRST | USB_CNTR_PDWN;
+    DelayClocks(250);
 
-  // Perform USB peripheral reset
-  USB_DRD_FS->CNTR = USB_CNTR_USBRST | USB_CNTR_PDWN;
-  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
-    asm("NOP");
-  }
+    USB_DRD_FS->CNTR &= ~USB_CNTR_PDWN;
 
-  USB_DRD_FS->CNTR &= ~USB_CNTR_PDWN;
+    // From STM32H523 datasheet, Tstartup for USB is <= 1us
+    DelayClocks(250);
 
-  // Wait startup time, for F042 and F070, this is <= 1 us.
-  for (volatile uint32_t i = 0; i < 200; i++) { // should be a few us
-    asm("NOP");
-  }
-  USB_DRD_FS->CNTR = 0; // Enable USB
+    USB_DRD_FS->CNTR = 0; // Enable USB
 
-  // FIXME for some reason if I don't read back CNTR the CHEP registers don't
-  // work.  WTF?  Is this a hardware quirk or a problem with compiler
-  // optimization?  Maybe a compiler optimization issue, since removing the
-  // volatile below prevents it from working.
-  volatile uint32_t reg = USB_DRD_FS->CNTR;
-  (void)reg;
+    // FIXME for some reason if I don't read back CNTR the CHEP registers don't
+    // work.  WTF?  Is this a hardware quirk or a problem with compiler
+    // optimization?  Maybe a compiler optimization issue, since removing the
+    // volatile below prevents it from working.
+    volatile uint32_t reg = USB_DRD_FS->CNTR;
+    (void)reg;
 
-  USB_DRD_FS->ISTR = 0; // Clear pending interrupts
+    USB_DRD_FS->ISTR = 0; // Clear pending interrupts
 
-  // Reset endpoints to disabled
-  USB_DRD_FS->CHEP0R = 0;
-  USB_DRD_FS->CHEP1R = 0;
-  USB_DRD_FS->CHEP2R = 0;
-  USB_DRD_FS->CHEP3R = 0;
-  USB_DRD_FS->CHEP4R = 0;
-  USB_DRD_FS->CHEP5R = 0;
-  USB_DRD_FS->CHEP6R = 0;
-  USB_DRD_FS->CHEP7R = 0;
-
+    // Reset endpoints to disabled
+    USB_DRD_FS->CHEP0R = 0;
+    USB_DRD_FS->CHEP1R = 0;
+    USB_DRD_FS->CHEP2R = 0;
+    USB_DRD_FS->CHEP3R = 0;
+    USB_DRD_FS->CHEP4R = 0;
+    USB_DRD_FS->CHEP5R = 0;
+    USB_DRD_FS->CHEP6R = 0;
+    USB_DRD_FS->CHEP7R = 0;
 }
 
 static void UsbReset(void)
@@ -491,13 +484,10 @@ void USB_DRD_FS_IRQHandler(void)
 {
     usb_state.interrupts ++;
 
-    // FIXME Chip errata says data in USB SRAM might be up to 800ns later
+    // Chip errata says data in USB SRAM might be up to 800ns later
     // than receive complete interrupt.  Clock is about 4ns so we want
     // about 200 instructions of delay.
-    for (int i = 0; i < 50; i++)
-    {
-        asm volatile ("NOP");
-    }
+    DelayClocks(200);
 
     uint32_t stat = USB_DRD_FS->ISTR;
     uint32_t clear = (~stat) | 0xFFFC807F;

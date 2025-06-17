@@ -38,11 +38,7 @@ static const uint32_t blink_interval_us = 250000;
 
 void hw_init(void);
 
-volatile uint32_t system_ticks = 0;
-
-void SysTick_Handler(void) {
-  system_ticks++;
-}
+// FIXME figure out what to do about newlib and the newlib OS interface
 
 // FIXME why does this get optimized out if not marked used?
 int _write(int fhdl, const char *buf, size_t count) __attribute__ ((used));
@@ -50,6 +46,8 @@ int _read(int fhdl, char *buf, size_t count) __attribute__ ((used));
 
 // Default logging with on-board UART
 int _write (int fhdl, const char *buf, size_t count) {
+    // FIXME do some smart delay algorithm so we don't drop characters
+    // when a terminal is connected, but don't block when it isn't.
     (void) fhdl;
     return UsbSend(buf, count);
 }
@@ -70,6 +68,7 @@ void hw_init(void)
     CoreInit();
     UsbInit();
     AudioInit();
+    DisplayInit();
 }
 
 void MemTest(void)
@@ -131,7 +130,6 @@ int main(void)
         AudioStart(NULL, 0); // FIXME needs real data
         //MemTest();
         //SDCardInit();
-        //DisplayInit();
 
         printf("Tick %lu %.8lX %d %d %d %d\r\n",
                 us,

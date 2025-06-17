@@ -638,11 +638,10 @@ void CoreInit(void)
 
     LowPowerInit();
 
-    const int clock = 250000000;
-    // FIXME disable timer interrupt, use TIM2 as the main system timebase
-    // 1ms tick timer, in CMSIS, sets up SysTick counter and enables interrupt.
-    SysTick_Config(clock / 1000);
-
+    // Set up SysTick as a free-running 24 bit counter
+    SysTick->LOAD = 0x00FFFFFF;
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |  // Use CPU clock as source
+                    SysTick_CTRL_ENABLE_Msk;      // Enable SysTick Timer
     CacheInit();
 
     GPIOInit();
@@ -710,4 +709,15 @@ uint32_t ADCRead(int n)
         return ADC2->DR;
 }
 
+
+void DelayClocks(uint32_t n)
+{
+    uint32_t start = SysTick->VAL;
+    uint32_t t;
+    do
+    {
+        t = SysTick->VAL;
+    }
+    while (((start - t) & 0x00FFFFFF) < n);
+}
 
