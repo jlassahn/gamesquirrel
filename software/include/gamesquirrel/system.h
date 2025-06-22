@@ -34,6 +34,13 @@ struct SystemLib
     void *(*FastAlloc)(int bytes);
     void (*FastFree)(void *ptr);
 
+    // Errors for SD Card I/O
+    // EIO 5  I/O Error (disk removed or failing)
+    // ENODEV 19 No Device
+    // EROFS 30 Read only filesystem
+    // EDOM 33 Input argument out of domain
+    // ENOSYS 38 not implemented
+
     bool (*SDCardIsInserted)(void);
     int (*SDCardInitialize)(void);
     int (*SDCardReadBlock)(int32_t block, uint8_t data_out[512]);
@@ -41,6 +48,5 @@ struct SystemLib
 
 };
 
-extern const SystemLib *system;
-// const SystemLib *system = (SystemLib *)0x08000400;
+extern const SystemLib *system_lib;
 

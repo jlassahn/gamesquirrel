@@ -3,6 +3,8 @@
 #include <stdio.h>
 
 extern void TestCharQueue(void);
+extern void TestDiskCache(void);
+extern void TestFatFs(void);
 
 static int test_errors = 0;
 static int total_errors = 0;
@@ -11,6 +13,8 @@ int main(void)
 {
     printf("Unit Tests...\n");
     RUN_TEST(TestCharQueue);
+    RUN_TEST(TestDiskCache);
+    RUN_TEST(TestFatFs);
 
     if (total_errors > 0)
     {

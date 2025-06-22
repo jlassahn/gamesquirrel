@@ -29,7 +29,7 @@ const SystemLib system_table __attribute__((section (".syslib"))) __attribute__(
     NULL, //int (*SDCardReadBlock)(int32_t block, uint8_t data_out[512]);
     NULL, //int (*SDCardWriteBlock)(int32_t block, uint8_t data_in[512]);
 };
-const SystemLib *system = &system_table;
+const SystemLib *system_lib = &system_table;
 
 
 uint32_t ADCRead(int n); // FIXME fake

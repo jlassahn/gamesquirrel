@@ -36,6 +36,12 @@ struct UsbSetupPacket
     uint16_t length;
 };
 
+// USB Product and Vendor IDs are from
+// https://github.com/obdev/v-usb/blob/master/usbdrv/USB-IDs-for-free.txt
+// PID = 0x27dd  VID = 0x16c0   For CDC-ACM class devices (modems)
+//
+// These aren't unique to this device, but should only be used by other
+// CDC-ACM devices that use default drivers.
 
 const uint32_t zeros[4] = {0, 0, 0, 0};
 const uint8_t device_descriptor[] =
@@ -47,8 +53,8 @@ const uint8_t device_descriptor[] =
     0x00, //bDeviceSubclass
     0x00, //bDeviceProtocol
     0x08, //bMaxPacketSize
-    0x34, 0x12, // idVendor FIXME
-    0xCD, 0xAB, // idProduct FIXME
+    0xC0, 0x16, // idVendor
+    0xDD, 0x27, // idProduct
     0x00, 0x01, // bcdDevice
     0x01, //iManufacturer
     0x02, //iProduct
@@ -159,6 +165,7 @@ const uint16_t strLangs[] =
     0x0409  // English US
 };
 
+// FIXME figure out for real what Manufacturer and Product strings should be.
 const uint16_t strManufacturer[] =
 {
     0x030E, //length 14
