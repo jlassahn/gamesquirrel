@@ -64,6 +64,17 @@ struct FatDirEntry
     uint8_t attributes;
 };
 
+typedef struct FatFile FatFile;
+struct FatFile
+{
+    FatFs *fs;
+    int32_t start_cluster;
+    uint32_t size;
+    uint32_t position;
+    int32_t current_cluster;
+    int32_t current_offset;
+};
+
 
 bool FatParseMBR(const uint8_t block[512], FatFs *fs);
 bool FatParseBPB(const uint8_t block[512], FatFs *fs);
@@ -71,6 +82,11 @@ uint32_t FatGetEntry(FatFs *fs, int32_t cluster);
 
 bool FatOpenRoot(FatFs *fs, FatDir *dir_out);
 SDCardError FatGetNextEntry(FatDir *dir, FatDirEntry *entry_out);
+bool FatOpenDir(FatFs *fs, FatDirEntry *entry, FatDir *dir_out);
+// FIXME maybe a directory rewind call?
+
+bool FatOpenFile(FatFs *fs, FatDirEntry *entry, FatFile *file_out);
+SDCardError FatFileRead(FatFile *file, void *buffer, int len);
 
 #endif
 

@@ -212,7 +212,7 @@ static SDCardError FatGetDirData(FatDir *dir, DirData **dd_out)
 
         int32_t lba = dir->fs->partition_start_lba
             +  dir->fs->data_lba_offset
-            + cluster - 2;
+            + (cluster - 2)*dir->fs->lba_per_cluster;
         lba += offset/512;
         offset = offset & 511;
 
@@ -287,6 +287,100 @@ SDCardError FatGetNextEntry(FatDir *dir, FatDirEntry *entry_out)
         // e.g. ATTR_VOLUME_ID == 0x08
         memcpy(entry_out->name, dd->name, 8);
         memcpy(entry_out->ext, dd->ext, 8);
+        entry_out->size = dd->size;
+        entry_out->cluster = (uint32_t)dd->cluster_lo
+            | ((uint32_t)dd->cluster_hi << 16);
+        entry_out->attributes = dd->attr & 0x3F;
+
         return SD_OK;
     }
+}
+
+bool FatOpenDir(FatFs *fs, FatDirEntry *entry, FatDir *dir_out)
+{
+    if ((entry->attributes & 0x18) != 0x10)
+        return false;
+
+    dir_out->fs = fs;
+    dir_out->start_cluster = entry->cluster;
+    dir_out->current_cluster = entry->cluster;
+    dir_out->current_offset = 0;
+
+    return true;
+}
+
+bool FatOpenFile(FatFs *fs, FatDirEntry *entry, FatFile *file_out)
+{
+    if ((entry->attributes & 0x18) != 0x00)
+        return false;
+
+    file_out->fs = fs;
+    file_out->start_cluster = entry->cluster;
+    file_out->size = entry->size;
+    file_out->position = 0;
+    file_out->current_cluster = entry->cluster;
+    file_out->current_offset = 0;
+
+    return true;
+}
+
+SDCardError FatFileRead(FatFile *file, void *buffer, int count)
+{
+    if (file->size < file->position + count)
+        return SD_OUT_OF_RANGE;
+
+    while (count > 0)
+    {
+        int len = count;
+        int32_t cluster_size = file->fs->lba_per_cluster*512;
+        int32_t cluster = file->current_cluster;
+        int32_t offset = file->current_offset;
+
+        int32_t lba = file->fs->partition_start_lba
+                +  file->fs->data_lba_offset
+                + (cluster - 2)*file->fs->lba_per_cluster;
+        lba += offset/512;
+        offset = offset & 511;
+
+        if (offset + len > 512)
+            len = 512 - offset;
+
+        uint8_t *block;
+        SDCardError err =  DiskCacheRead(file->fs->cache, lba, &block);
+        if (err != SD_OK)
+            return err;
+        memcpy(buffer, block + offset, len);
+        buffer += len;
+        count -= len;
+        file->current_offset += len;
+        file->position += len;
+
+        if (file->current_offset >= cluster_size)
+        {
+            uint32_t fat_entry = FatGetEntry(file->fs, cluster);
+
+            // FIXME more efficient lookup here?
+            uint32_t max_entry;
+            if (file->fs->fat_bits == 12)
+                max_entry = 0xFF5;
+            else if (file->fs->fat_bits == 16)
+                max_entry = 0xFFF5;
+            else
+                max_entry = 0x0FFFFFF5;
+
+            if (fat_entry > max_entry)
+            {
+                // Unexpected End of file -- corrupt filesystem
+                file->current_offset = 0;
+                file->current_cluster = file->start_cluster;
+                return SD_HWFAIL; // FIXME better error message
+            }
+            else
+            {
+                file->current_offset = 0;
+                file->current_cluster = fat_entry;
+            }
+        }
+    }
+    return SD_OK;
 }

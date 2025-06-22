@@ -74,20 +74,67 @@ void TestDiskCache(void)
     FreeFs();
 }
 
+static void TestFileContents(FatFile *file, int breakpoint)
+{
+    int remaining = file->size;
+    int count = 0;
+    static char buffer[26];
+
+    while (remaining > 0)
+    {
+        int len = 26;
+        if (remaining < len)
+            len = remaining;
+
+        // FIXME there's an error in ROOT1.TXT, this patches around it
+        if ((count < breakpoint) && (count + len > breakpoint))
+            len = breakpoint - count;
+
+        memset(buffer, 0, sizeof(buffer));
+        CHECK(FatFileRead(file, buffer, len) == SD_OK);
+        CHECK(memcmp(buffer, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", len) == 0);
+        if (memcmp(buffer, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", len) != 0)
+        {
+            printf("compare failed at position %d\n", file->position);
+        }
+
+        remaining -= len;
+        count += len;
+    }
+}
+
 static void TestFiles(FatFs *fatfs)
 {
+    /* expected directory structure:
+        ROOT1.TXT
+        ROOT2.TXT
+        DIR1/
+            DIR2/
+                SUBFILE1.X
+    */
+
     FatDir dir;
-    CHECK(FatOpenRoot(fatfs, &dir) == true);
     FatDirEntry dirent;
+    FatFile file;
+
+    CHECK(FatOpenRoot(fatfs, &dir) == true);
     memset(&dirent, 0, sizeof(dirent));
     CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
     CHECK(memcmp(dirent.name, "ROOT1   ", 8) == 0);
     CHECK(memcmp(dirent.ext, "TXT", 3) == 0);
 
+    memset(&file, 0, sizeof(file));
+    CHECK(FatOpenFile(fatfs, &dirent, &file));
+    CHECK(file.size == 0x2328);
+    TestFileContents(&file, 0xFA0);
+
     memset(&dirent, 0, sizeof(dirent));
     CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
     CHECK(memcmp(dirent.name, "ROOT2   ", 8) == 0);
     CHECK(memcmp(dirent.ext, "TXT", 3) == 0);
+    CHECK(FatOpenFile(fatfs, &dirent, &file));
+    CHECK(file.size == 0x04D2);
+    TestFileContents(&file, -1);
 
     memset(&dirent, 0, sizeof(dirent));
     CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
@@ -96,6 +143,46 @@ static void TestFiles(FatFs *fatfs)
     // FIXME test whether entry is a directory
 
     CHECK(FatGetNextEntry(&dir, &dirent) == SD_OUT_OF_RANGE);
+
+    // Recurse into DIR1
+    CHECK(FatOpenDir(fatfs, &dirent, &dir) == true);
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, ".       ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "   ", 3) == 0);
+
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, "..      ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "   ", 3) == 0);
+
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, "DIR2    ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "   ", 3) == 0);
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OUT_OF_RANGE);
+
+    //Recurse into DIR2
+    CHECK(FatOpenDir(fatfs, &dirent, &dir) == true);
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, ".       ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "   ", 3) == 0);
+
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, "..      ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "   ", 3) == 0);
+
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, "SUBFILE1", 8) == 0);
+    CHECK(memcmp(dirent.ext, "X  ", 3) == 0);
+
+    memset(&file, 0, sizeof(file));
+    CHECK(FatOpenFile(fatfs, &dirent, &file));
+    CHECK(file.size == 0x7B);
+    TestFileContents(&file, -1);
+
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OUT_OF_RANGE);
+
+    //Attempt to recurse into SUBFILE1.X which is not a directory
+    CHECK(FatOpenDir(fatfs, &dirent, &dir) == false);
+
 }
 
 void TestFatFs(void)
