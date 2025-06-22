@@ -44,27 +44,33 @@ struct FatFs
     DiskCache *cache;
 };
 
-// Physical layout
-struct DirectoryEntry
+typedef struct FatDir FatDir;
+struct FatDir
 {
+    FatFs *fs;
+    int32_t start_cluster;
+    int32_t current_cluster;
+    int32_t current_offset;
+};
+
+
+typedef struct FatDirEntry FatDirEntry;
+struct FatDirEntry
+{
+    uint32_t size;
+    uint32_t cluster;
     char name[8];
     char ext[3];
-    uint8_t attr;
-    uint8_t reserved;
-    uint8_t hundredths;
-    uint16_t create_time;
-    uint16_t create_date;
-    uint16_t access_date;
-    uint16_t cluster_hi;
-    uint16_t write_time;
-    uint16_t write_date;
-    uint16_t cluster_lo;
-    uint32_t size;
+    uint8_t attributes;
 };
+
 
 bool FatParseMBR(const uint8_t block[512], FatFs *fs);
 bool FatParseBPB(const uint8_t block[512], FatFs *fs);
 uint32_t FatGetEntry(FatFs *fs, int32_t cluster);
+
+bool FatOpenRoot(FatFs *fs, FatDir *dir_out);
+SDCardError FatGetNextEntry(FatDir *dir, FatDirEntry *entry_out);
 
 #endif
 

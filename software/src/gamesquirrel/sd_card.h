@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// FIXME this is becoming a general filesystem error list, rename and reorg.
 typedef enum SDCardError SDCardError;
 enum SDCardError
 {

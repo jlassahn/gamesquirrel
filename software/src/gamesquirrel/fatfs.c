@@ -6,9 +6,27 @@
 
 #include "gamesquirrel/fatfs.h"
 #include "gamesquirrel/sd_card.h"
+#include <string.h>
 
 #include <stdio.h> // FIXME fake
 
+typedef struct DirData DirData;
+struct DirData
+{
+    uint8_t name[8];
+    uint8_t ext[3];
+    uint8_t attr;
+    uint8_t reserved;
+    uint8_t hundredths;
+    uint16_t create_time;
+    uint16_t create_date;
+    uint16_t access_date;
+    uint16_t cluster_hi;
+    uint16_t write_time;
+    uint16_t write_date;
+    uint16_t cluster_lo;
+    uint32_t size;
+};
 bool FatParseMBR(const uint8_t block[512], FatFs *fs)
 {
     if (block[510] != 0x55)
@@ -153,3 +171,122 @@ uint32_t FatGetEntry(FatFs *fs, int32_t cluster)
     return 0xFFFFFFF7;
 }
 
+bool FatOpenRoot(FatFs *fs, FatDir *dir_out)
+{
+    dir_out->fs = fs;
+    dir_out->start_cluster = fs->root_cluster;
+    dir_out->current_cluster = fs->root_cluster;
+    dir_out->current_offset = 0;
+    return true;
+}
+
+static SDCardError FatGetDirData(FatDir *dir, DirData **dd_out)
+{
+    if (dir->start_cluster == 0) // this is an old-style root directory
+    {
+        if (dir->current_offset >= dir->fs->root_entries*32)
+            return SD_OUT_OF_RANGE;
+
+        int32_t root_size = dir->fs->root_entries*32/512;
+        int32_t root_lba = dir->fs->partition_start_lba
+            + dir->fs->data_lba_offset
+            - root_size;
+        int32_t lba = root_lba + dir->current_offset/512;
+        int32_t offset = dir->current_offset & 511;
+
+        uint8_t *block;
+        SDCardError err =  DiskCacheRead(dir->fs->cache, lba, &block);
+        if (err != SD_OK)
+            return err;
+
+        *dd_out = (DirData *)(block + offset);
+        return SD_OK;
+    }
+    else
+    {
+        if (dir->current_offset < 0)
+            return SD_OUT_OF_RANGE;
+
+        int32_t cluster = dir->current_cluster;
+        int32_t offset = dir->current_offset;
+
+        int32_t lba = dir->fs->partition_start_lba
+            +  dir->fs->data_lba_offset
+            + cluster - 2;
+        lba += offset/512;
+        offset = offset & 511;
+
+        uint8_t *block;
+        SDCardError err =  DiskCacheRead(dir->fs->cache, lba, &block);
+        if (err != SD_OK)
+            return err;
+
+        *dd_out = (DirData *)(block + offset);
+        return SD_OK;
+    }
+}
+
+static void FatNextDirData(FatDir *dir)
+{
+    if (dir->start_cluster == 0) // this is an old-style root directory
+    {
+        dir->current_offset += 32;
+    }
+    else
+    {
+        dir->current_offset += 32;
+
+        int32_t cluster_size = dir->fs->lba_per_cluster * 512;
+        if (dir->current_offset >= cluster_size)
+        {
+            int32_t cluster = dir->current_cluster;
+            uint32_t fat_entry = FatGetEntry(dir->fs, cluster);
+
+            // FIXME more efficient lookup here?
+            uint32_t max_entry;
+            if (dir->fs->fat_bits == 12)
+                max_entry = 0xFF5;
+            else if (dir->fs->fat_bits == 16)
+                max_entry = 0xFFF5;
+            else
+                max_entry = 0x0FFFFFF5;
+
+            if (fat_entry > max_entry)
+            {
+                // End of file
+                dir->current_offset = -1;
+                return;
+            }
+            else
+            {
+                dir->current_offset = 0;
+                dir->current_cluster = fat_entry;
+            }
+        }
+    }
+}
+
+SDCardError FatGetNextEntry(FatDir *dir, FatDirEntry *entry_out)
+{
+    while (true)
+    {
+        DirData *dd;
+        SDCardError err = FatGetDirData(dir, &dd);
+        if (err != SD_OK)
+            return err;
+
+        if (dd->name[0] ==  0x00) // 0x00 means end of entry list
+            return SD_OUT_OF_RANGE;
+
+        FatNextDirData(dir);
+
+        if (dd->name[0] ==  0xE5) // 0xE5 means empty entry but more to follow
+            continue;
+
+        // FIXME check for attributes indicating not a real entry
+        // e.g. ATTR_VOLUME_ID == 0x08
+        memcpy(entry_out->name, dd->name, 8);
+        memcpy(entry_out->ext, dd->ext, 8);
+        return SD_OK;
+    }
+}

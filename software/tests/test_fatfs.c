@@ -74,6 +74,30 @@ void TestDiskCache(void)
     FreeFs();
 }
 
+static void TestFiles(FatFs *fatfs)
+{
+    FatDir dir;
+    CHECK(FatOpenRoot(fatfs, &dir) == true);
+    FatDirEntry dirent;
+    memset(&dirent, 0, sizeof(dirent));
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, "ROOT1   ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "TXT", 3) == 0);
+
+    memset(&dirent, 0, sizeof(dirent));
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, "ROOT2   ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "TXT", 3) == 0);
+
+    memset(&dirent, 0, sizeof(dirent));
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OK);
+    CHECK(memcmp(dirent.name, "DIR1    ", 8) == 0);
+    CHECK(memcmp(dirent.ext, "   ", 3) == 0);
+    // FIXME test whether entry is a directory
+
+    CHECK(FatGetNextEntry(&dir, &dirent) == SD_OUT_OF_RANGE);
+}
+
 void TestFatFs(void)
 {
     static FatFs fatfs;
@@ -114,9 +138,8 @@ void TestFatFs(void)
 
     CHECK(FatGetEntry(&fatfs, 0) == 0xFFF8);
     CHECK(FatGetEntry(&fatfs, 1) == 0xFFFF);
-    for (int i=0; i<40; i++)
-        printf("cluster %d entry %X\n", i, FatGetEntry(&fatfs, i));
 
+    TestFiles(&fatfs);
     FreeFs();
 
     // FAT32 partitioned filesystem
@@ -141,9 +164,8 @@ void TestFatFs(void)
 
     CHECK(FatGetEntry(&fatfs, 0) == 0x0FFFFFF8);
     CHECK(FatGetEntry(&fatfs, 1) == 0x0FFFFFFF);
-    for (int i=0; i<40; i++)
-        printf("cluster %d entry %X\n", i, FatGetEntry(&fatfs, i));
 
+    TestFiles(&fatfs);
     FreeFs();
 
     // FAT12 no partitions
@@ -166,9 +188,10 @@ void TestFatFs(void)
 
     CHECK(FatGetEntry(&fatfs, 0) == 0x0FF0);
     CHECK(FatGetEntry(&fatfs, 1) == 0x0FFF);
-    for (int i=0; i<40; i++)
-        printf("cluster %d entry %X\n", i, FatGetEntry(&fatfs, i));
 
+    TestFiles(&fatfs);
     FreeFs();
+
+    // FIXME need to test with larger directories, to test cluster rollover
 }
 

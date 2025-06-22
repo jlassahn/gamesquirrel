@@ -24,6 +24,9 @@ struct DiskCache
     uint8_t data[512*DISK_CACHE_BLOCKS];
 };
 
+// FIXME make flush and init different operations,
+// so we can support writes later.
+
 void DiskCacheFlush(DiskCache *cache);
 SDCardError DiskCacheRead(DiskCache *cache, uint32_t block, uint8_t **ptr_out);
 
