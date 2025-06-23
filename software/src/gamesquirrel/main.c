@@ -129,7 +129,32 @@ int main(void)
 
         AudioStart(NULL, 0); // FIXME needs real data
         //MemTest();
-        //SDCardInit();
+
+        if (ButtonRead(0))
+        {
+            if (SDCardInit())
+                printf("SD Card Initialized\r\n");
+            else
+                printf("SD Card Init FAILED\r\n");
+
+            static uint8_t buffer[512];
+            if (SDCardReadBlock(0x0000, buffer) == SD_OK)
+            {
+                for (int i=0; i<512; i++)
+                {
+                    DelayClocks(60000);
+                    printf(" %.2X", buffer[i]);
+                    if ((i & 15) == 15)
+                        printf("\r\n");
+                }
+                DelayClocks(60000);
+            }
+            else
+            {
+                DelayClocks(60000);
+                printf("ReadBlock FAILED\r\n");
+            }
+        }
 
         printf("Tick %lu %.8lX %d %d %d %d\r\n",
                 us,

@@ -333,7 +333,7 @@ static void GPIOInit(void)
         (0 << 2 ) | // PB1     QSPI
         (0 << 4 ) | // PB2     QSPI
         (0 << 6 ) | // PB3     SD_SCK
-        (2 << 8 ) | // PB4     SD_MISO
+        (1 << 8 ) | // PB4     SD_MISO
         (0 << 10) | // PB5     SD_MOSI
         (1 << 12) | // PB6     SD_Detect
         (2 << 14) | // PB7     Button3
