@@ -148,7 +148,6 @@ bool SDCardInit(void)
         if (SendReceive(0xFF) != 0xFF)
             return false;
     }
-
     DelayClocks(250000);
 
     SendCommand(0, 0x00000000, 0x94);
@@ -166,8 +165,8 @@ bool SDCardInit(void)
     SendCommand(58, 0x0, 0);
     ReceiveResp(&r, &data);
 
-    // 14 clocks minimum, at 25MHz, 2_000_000 maximum wait time
-    for (int timeout=0; timeout<2000000; timeout++)
+    // 2 seconds max
+    for (int timeout=0; timeout<2000; timeout++)
     {
         SendCommand(55,0,0); // APP_CMD, next command is an ACMD
         ReceiveResp(&r, &data);
@@ -180,10 +179,12 @@ bool SDCardInit(void)
         ReceiveResp(&r, &data);
         if (r == 0x00)
             break;
+        if (r != 0x01)
+            return false;
+        DelayClocks(250000);
     }
     if (r != 0)
         return false;
-
 
     if (v2_card)
     {

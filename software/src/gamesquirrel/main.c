@@ -10,6 +10,7 @@
 #include "gamesquirrel/sd_card.h"
 #include "gamesquirrel/display.h"
 #include "gamesquirrel/system.h"
+#include "gamesquirrel/fatfs.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -137,23 +138,24 @@ int main(void)
             else
                 printf("SD Card Init FAILED\r\n");
 
-            static uint8_t buffer[512];
-            if (SDCardReadBlock(0x0000, buffer) == SD_OK)
+            static FatFs fs;
+            static DiskCache cache;
+            static FatDir dir;
+            static FatDirEntry dirent;
+            if (FatInit(&fs, &cache) != SD_OK)
+                printf("FatInit FAILED\r\n");
+
+            if (!FatOpenRoot(&fs, &dir))
+                printf("FatOpenRootFAILED\r\n");
+
+            while (FatGetNextEntry(&dir, &dirent) == SD_OK)
             {
-                for (int i=0; i<512; i++)
-                {
-                    DelayClocks(60000);
-                    printf(" %.2X", buffer[i]);
-                    if ((i & 15) == 15)
-                        printf("\r\n");
-                }
-                DelayClocks(60000);
+                DelayClocks(250000);
+                printf("%.8s %.3s  size = %lu\r\n",
+                        dirent.name, dirent.ext, dirent.size);
             }
-            else
-            {
-                DelayClocks(60000);
-                printf("ReadBlock FAILED\r\n");
-            }
+            DelayClocks(250000);
+            printf("FAT bits = %ld\r\n", fs.fat_bits);
         }
 
         printf("Tick %lu %.8lX %d %d %d %d\r\n",

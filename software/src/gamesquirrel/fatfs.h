@@ -80,6 +80,8 @@ bool FatParseMBR(const uint8_t block[512], FatFs *fs);
 bool FatParseBPB(const uint8_t block[512], FatFs *fs);
 uint32_t FatGetEntry(FatFs *fs, int32_t cluster);
 
+SDCardError FatInit(FatFs *fs, DiskCache *cache);
+
 bool FatOpenRoot(FatFs *fs, FatDir *dir_out);
 SDCardError FatGetNextEntry(FatDir *dir, FatDirEntry *entry_out);
 bool FatOpenDir(FatFs *fs, FatDirEntry *entry, FatDir *dir_out);

@@ -282,11 +282,11 @@ SDCardError FatGetNextEntry(FatDir *dir, FatDirEntry *entry_out)
 
         if (dd->name[0] ==  0xE5) // 0xE5 means empty entry but more to follow
             continue;
-
-        // FIXME check for attributes indicating not a real entry
-        // e.g. ATTR_VOLUME_ID == 0x08
+        // ATTR_VOLUME_ID == 0x08 -- not a real file, maybe LFS
+        if (dd->attr & 0x08)
+            continue;
         memcpy(entry_out->name, dd->name, 8);
-        memcpy(entry_out->ext, dd->ext, 8);
+        memcpy(entry_out->ext, dd->ext, 3);
         entry_out->size = dd->size;
         entry_out->cluster = (uint32_t)dd->cluster_lo
             | ((uint32_t)dd->cluster_hi << 16);
@@ -382,5 +382,27 @@ SDCardError FatFileRead(FatFile *file, void *buffer, int count)
             }
         }
     }
+    return SD_OK;
+}
+
+SDCardError FatInit(FatFs *fs, DiskCache *cache)
+{
+    SDCardError err;
+    uint8_t *block;
+
+    DiskCacheFlush(cache);
+    err = DiskCacheRead(cache, 0, &block);
+    if (err != SD_OK)
+        return err;
+    if (!FatParseMBR(block, fs))
+        return SD_HWFAIL; //FIXME better error
+
+    err = DiskCacheRead(cache, fs->partition_start_lba, &block);
+    if (err != SD_OK)
+        return err;
+    if (!FatParseBPB(block, fs))
+        return SD_HWFAIL; //FIXME better error
+
+    fs->cache = cache;
     return SD_OK;
 }
