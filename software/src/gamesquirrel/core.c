@@ -584,6 +584,7 @@ ADC2
         0x00400000 | // VREFEN
         0x00030000;  // CKMODE clock == hclk/4 == 62.5MHz
 
+    ADC1->OR = 0x00000001; // Option to enable ADC channel 0
     ADC1->CR = 0x00000000; // disable DEEPPWD
     ADC2->CR = 0x00000000;
     ADC1->CR = 0x10000000; // enable ADVREGEN

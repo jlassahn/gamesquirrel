@@ -158,9 +158,10 @@ int main(void)
             printf("FAT bits = %ld\r\n", fs.fat_bits);
         }
 
-        printf("Tick %lu %.8lX %d %d %d %d\r\n",
+        printf("Tick %lu %.8lX %.8lX %d %d %d %d\r\n",
                 us,
                 ADCRead(1),
+                ADCRead(2),
                 ButtonRead(0),
                 ButtonRead(1),
                 ButtonRead(2),
