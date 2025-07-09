@@ -74,14 +74,5 @@ SECTIONS
 		*(.bss*)
 		*(COMMON)
 	} >DRAM
-
-	.notes 0 (TYPE = SHT_NOTE) :
-	{
-		LONG(14)
-		LONG(4)
-		LONG(1)
-		ASCIZ "Squirrel.Stack\0"
-		LONG(4096)
-	}
 }
 
