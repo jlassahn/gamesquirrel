@@ -72,6 +72,8 @@ void hw_init(void)
     DisplayInit();
 }
 
+void DisplayTest(void);
+
 void MemTest(void)
 {
     volatile uint32_t *buffer = (void *)0x90000000;
@@ -120,13 +122,14 @@ int main(void)
             UsbSend(buff, length);
         }
 
+        DisplayTest();
         uint32_t us = TimeMicroseconds();
         if (us - last_us < blink_interval_us)
             continue;
         last_us += blink_interval_us;
 
         LEDWrite(0, (us / 1000) % 1000);
-        LEDWrite(1, (us / 5000) % 1000);
+        // LEDWrite(1, (us / 5000) % 1000);
 
         AudioStart(NULL, 0); // FIXME needs real data
         //MemTest();

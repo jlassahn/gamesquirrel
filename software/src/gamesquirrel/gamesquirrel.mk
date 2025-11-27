@@ -10,6 +10,7 @@ src/gamesquirrel/display.c \
 src/gamesquirrel/sd_card.c \
 src/gamesquirrel/fatfs.c \
 src/gamesquirrel/elf.c \
+src/gamesquirrel/display_test.c \
 src/gamesquirrel/main.c
 
 GS_OBJS := $(addprefix build/obj/armsys/, $(addsuffix .o, $(basename $(GS_SRCS))))

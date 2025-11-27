@@ -57,5 +57,6 @@ zerofill_test:
 	bl main
 
 	/* Infinite loop on exit from main. */
+	/* FIXME call error handler instead? */
 	b .
 

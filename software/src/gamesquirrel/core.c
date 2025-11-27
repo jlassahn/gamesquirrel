@@ -7,8 +7,17 @@
 #include "stm32h523xx.h"
 #include <string.h>
 
+enum InitErrFlags
+{
+    VOLTREG_FAIL = 0x0001,
+    CLOCKS_FAIL  = 0x0002
+};
+
+static uint32_t init_errors = 0;
+
 void HardFault_Handler(void)
 {
+    __disable_irq();
     LEDWrite(0, 1000);
     LEDWrite(1, 0);
 
@@ -32,8 +41,17 @@ static void ClockInit(void)
 {
     // set highest voltage on regulator before setting clocks to high speed
     PWR->VOSCR = 0x30; //SCALE0, highest voltage
+
+    int timeout = 0;
     while ((PWR->VOSSR & PWR_VOSSR_VOSRDY) == 0)
-    {}
+    {
+        timeout++;
+        if (timeout > 1000000)
+        {
+            init_errors |= VOLTREG_FAIL;
+            break;
+        }
+    }
 
     RCC->CIER = 0U;
 
@@ -93,14 +111,28 @@ static void ClockInit(void)
         RCC_CR_PLL2RDY |
         RCC_CR_PLL3RDY;
 
+    timeout = 0;
     while ((RCC->CR & rcc_cr_mask) != rcc_cr_mask)
-    {}
+    {
+        timeout++;
+        if (timeout > 1000000)
+        {
+            init_errors |= CLOCKS_FAIL;
+            break;
+        }
+    }
 
     // set flash latency before switching CPU clocks
     FLASH->ACR =  0x125; // prefetch enabled, 2 programming delay, 5 wait states
     (void)FLASH->ACR; // readback to confirm write completed
 
-    RCC->CFGR1 = 0x0003; // System clock is PLL1
+    // If previous init steps failed, leave the system running on HSI
+    // to help with debugging.
+    if (init_errors == 0)
+    {
+        RCC->CFGR1 = 0x0003; // System clock is PLL1
+    }
+
     RCC->CFGR2 = 0; // All AHB and APB clocks are at System/1
     (void)RCC->CFGR1; // readback to force sync
     (void)RCC->CFGR2; // readback to force sync
@@ -201,12 +233,12 @@ static void CacheInit(void)
 
     ICACHE->CR = 0x0006; // invalidate ICACHE
     while (ICACHE->SR & 1) // wait for busy
-    {}
+    {} // FIXME timeout
     ICACHE->CR = 0x0005; // enable ICACHE
 
     DCACHE1->CR = 0x0002; // invalidate full DCACHE
     while (DCACHE1->SR & 9) // wait for busy bits
-    {}
+    {} // FIXME timeout
 
     DCACHE1->CR = 0x80000001; // enable DCACHE, increment mode
 }
@@ -446,8 +478,7 @@ static void TimerInit(void)
     LPTIM2->CR = 0x0005; //count start
     // enable compare channel 1 to generate events for DAC DMA
     LPTIM2->CCR1 = 0;
-    LPTIM2->CCMR1 = 0x00000002
-    ;
+    LPTIM2->CCMR1 = 0x00000002;
     // LPTIM1 can be used to measure PLL2/P or PLL3/R
 }
 
@@ -494,7 +525,7 @@ static void OctoSPIInit(void)
     OCTOSPI1->IR = 0x35; // Enter QPI command
     //OCTOSPI1->AR = 0x002C5555; // address is don't care for ReadID
     while ((OCTOSPI1->SR & 0x22) != 0x02)
-    {}
+    {} // FIXME timeout
     OCTOSPI1->CR = 0x00000000; // disable
 
     // set up memory mapped read timing
@@ -535,7 +566,8 @@ static void SPIInit(void)
     // set up Display SPI2
     SPI2->CR2 = 0; // TSIZE
     SPI2->CFG1 =
-        0x50000000 | // FIXME prescaler divide by 64 for test
+        //0x50000000 | // FIXME prescaler divide by 64 for test
+        0x10000000 | // FIXME prescaler divide by 4
         // 0x80000000 | // prescaler disabled
         // 0x00008000 | // FIXME DMA enable
         0x00000007;  // Data size 8 bits
@@ -565,6 +597,7 @@ static void SPIInit(void)
 
 static void ADCInit(void)
 {
+    // FIXME do calibration
 /*
 ADC1
     input 0, Joystick X
@@ -601,7 +634,7 @@ ADC2
     ADC2->CR = 0x10000001;
     // wait for ADRDY
     while (((ADC1->ISR & 0x0001) == 0) || ((ADC2->ISR & 0x0001) == 0))
-    {}
+    {} // FIXME timeout
 
     ADC1->CFGR =
         //0x02000000 | // JAUTO
@@ -635,19 +668,31 @@ void CoreInit(void)
     SCB->VTOR = FLASH_BASE; // Set up interrupt vector table
     SCB->CPACR |= ((3UL << 20U)|(3UL << 22U)); // Enable Floating Point
 
-    ClockInit();
-
-    LowPowerInit();
-
     // Set up SysTick as a free-running 24 bit counter
     SysTick->LOAD = 0x00FFFFFF;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |  // Use CPU clock as source
                     SysTick_CTRL_ENABLE_Msk;      // Enable SysTick Timer
-    CacheInit();
 
+    ClockInit();
     GPIOInit();
     TimerInit();
+
+    if (init_errors)
+    {
+        TIM1->CCR2 = 999;
+        TIM1->CCR3 = 0;
+    }
+    else
+    {
+        TIM1->CCR2 = 999;
+        TIM1->CCR3 = 999;
+    }
+
+    LowPowerInit();
     OctoSPIInit();
+
+    CacheInit();
+
     SPIInit();
     ADCInit();
 
